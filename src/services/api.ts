@@ -1,0 +1,296 @@
+import { landingPages } from "@/data/landing-pages";
+import { mediaItems } from "@/data/media";
+import type {
+  Product,
+  Category,
+  LandingPage,
+  MediaItem,
+  ProductCategory,
+  LandingSlug,
+  HomepageSection,
+} from "@/types";
+import type { Product as EcomProduct, Category as EcomCategory } from "@/lib/ecommerce-types";
+import type { Service } from "@/types";
+
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function getApiBaseUrl() {
+  // Client-side: always use relative URLs so the request goes to the same
+  // origin the browser is on. This avoids www vs non-www CORS issues entirely.
+  if (typeof window !== "undefined") {
+    return "";
+  }
+
+  // Server-side (SSR / build time)
+  if (process.env.NODE_ENV === "production") {
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "");
+    }
+    const vercelUrl = process.env.VERCEL_URL;
+    if (vercelUrl) {
+      return vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
+    }
+    return "https://adhyatmiksutraa.com";
+  }
+
+  // Development server-side
+  const envUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  if (envUrl) return envUrl.replace(/\/$/, "");
+  return "http://localhost:3000";
+}
+
+function buildApiUrl(path: string) {
+  const base = getApiBaseUrl();
+  if (!base) return path;
+  return `${base}${path}`;
+}
+
+function mapEcomProductToProduct(ecomProduct: EcomProduct): Product {
+  const salePrice = ecomProduct.sale_price;
+  const basePrice = ecomProduct.price;
+  return {
+    id: ecomProduct.id,
+    name: ecomProduct.name,
+    slug: ecomProduct.slug,
+    shortDescription: ecomProduct.short_description || "",
+    price: salePrice && salePrice < basePrice ? salePrice : basePrice,
+    originalPrice: salePrice && salePrice < basePrice ? basePrice : undefined,
+    image: ecomProduct.featured_image || ecomProduct.images[0] || "/placeholder.jpg",
+    category: (ecomProduct.category?.slug as ProductCategory) || "candles",
+    status: ecomProduct.is_active ? "active" : "draft",
+    landingPages: [],
+    homepageSection: (ecomProduct.homepage_section as HomepageSection) || undefined,
+  };
+}
+
+function mapEcomCategoryToCategory(ecomCategory: EcomCategory): Category {
+  return {
+    id: ecomCategory.id,
+    name: ecomCategory.name,
+    slug: ecomCategory.slug,
+    description: ecomCategory.description || "",
+    image: ecomCategory.image_url || "/placeholder.jpg",
+    visibleOnHomepage: ecomCategory.is_active,
+  };
+}
+
+export async function getProducts(): Promise<Product[]> {
+  try {
+    const url = buildApiUrl(`/api/products?limit=100`);
+    console.log("Fetching products from:", url);
+    
+    const res = await fetch(url, {
+      next: { revalidate: 300 },
+      // Add timeout to prevent hanging during build
+      signal: AbortSignal.timeout(10000), // 10 second timeout
+    });
+    
+    console.log("Products API response status:", res.status);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("Failed to fetch products:", res.status, errorText);
+      console.error("Request URL was:", url);
+      throw new Error(`Failed to fetch products: ${res.status} ${errorText}`);
+    }
+    
+    const data = await res.json();
+    console.log(`Received ${data.products?.length || 0} products from API`);
+    
+    if (!data.products || !Array.isArray(data.products)) {
+      console.error("Invalid products data structure:", data);
+      return [];
+    }
+    
+    const mappedProducts = data.products.map(mapEcomProductToProduct);
+    
+    return mappedProducts;
+  } catch (err) {
+    console.error("Error fetching products:", err);
+    console.error("This error occurred while fetching products for homepage");
+    // Return empty array instead of throwing to prevent build failures
+    return [];
+  }
+}
+
+export async function getActiveProducts(): Promise<Product[]> {
+  return getProducts();
+}
+
+export async function getProductById(id: string): Promise<Product | undefined> {
+  try {
+    const res = await fetch(buildApiUrl(`/api/products/${id}`), {
+      cache: "no-store",
+    });
+    if (!res.ok) return undefined;
+    const data = await res.json();
+    return mapEcomProductToProduct(data.product);
+  } catch (err) {
+    console.error("Error fetching product:", err);
+    return undefined;
+  }
+}
+
+export async function getProductsByCategory(
+  category: ProductCategory
+): Promise<Product[]> {
+  try {
+    const categories = await getCategories();
+    const cat = categories.find((c) => c.slug === category);
+    if (!cat) return [];
+    
+    const res = await fetch(
+      buildApiUrl(`/api/products?categoryId=${cat.id}`),
+      { cache: "no-store" }
+    );
+    if (!res.ok) throw new Error("Failed to fetch products");
+    const data = await res.json();
+    return data.products.map(mapEcomProductToProduct);
+  } catch (err) {
+    console.error("Error fetching products by category:", err);
+    return [];
+  }
+}
+
+export async function getProductsByIds(ids: string[]): Promise<Product[]> {
+  try {
+    const products = await getProducts();
+    return products.filter((p) => ids.includes(p.id));
+  } catch (err) {
+    console.error("Error fetching products by IDs:", err);
+    return [];
+  }
+}
+
+export async function getCategories(): Promise<Category[]> {
+  try {
+    // Always use a relative URL to avoid cross-origin issues between www and non-www
+    const res = await fetch(`/api/categories`, {
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error("Failed to fetch categories");
+    const data = await res.json();
+    return data.categories.map(mapEcomCategoryToCategory);
+  } catch (err) {
+    console.error("Error fetching categories:", err);
+    return [];
+  }
+}
+
+export async function getVisibleCategories(): Promise<Category[]> {
+  return getCategories();
+}
+
+export async function getCategoryBySlug(
+  slug: string
+): Promise<Category | undefined> {
+  try {
+    const categories = await getCategories();
+    return categories.find((c) => c.slug === slug);
+  } catch (err) {
+    console.error("Error fetching category:", err);
+    return undefined;
+  }
+}
+
+export async function getLandingPages(): Promise<LandingPage[]> {
+  await delay(100);
+  return [...landingPages];
+}
+
+export async function getLandingPageBySlug(
+  slug: LandingSlug
+): Promise<LandingPage | undefined> {
+  await delay(100);
+  return landingPages.find((lp) => lp.slug === slug);
+}
+
+export async function updateLandingPage(
+  updated: LandingPage
+): Promise<LandingPage> {
+  await delay(200);
+  const idx = landingPages.findIndex((lp) => lp.id === updated.id);
+  if (idx !== -1) {
+    landingPages[idx] = updated;
+  }
+  return updated;
+}
+
+export async function getMediaItems(): Promise<MediaItem[]> {
+  await delay(100);
+  return [...mediaItems];
+}
+
+export async function updateProduct(updated: Product): Promise<Product> {
+  return updated;
+}
+
+export async function createProduct(
+  product: Omit<Product, "id">
+): Promise<Product> {
+  return { ...product, id: "" };
+}
+
+export async function updateCategory(updated: Category): Promise<Category> {
+  return updated;
+}
+
+export async function createCategory(
+  category: Omit<Category, "id">
+): Promise<Category> {
+  return { ...category, id: "" };
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  return;
+}
+
+export async function getAdminServices(): Promise<Service[]> {
+  const res = await fetch(buildApiUrl("/api/admin/services"), {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error("Failed to fetch services");
+  }
+  const data = await res.json();
+  return data.services as Service[];
+}
+
+export async function createService(service: Omit<Service, "id">): Promise<Service> {
+  const res = await fetch(buildApiUrl("/api/admin/services"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(service),
+  });
+  if (!res.ok) {
+    throw new Error("Failed to create service");
+  }
+  const data = await res.json();
+  return data.service as Service;
+}
+
+export async function updateService(service: Service): Promise<Service> {
+  const res = await fetch(buildApiUrl(`/api/admin/services/${service.id}`), {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(service),
+  });
+  if (!res.ok) {
+    throw new Error("Failed to update service");
+  }
+  const data = await res.json();
+  return data.service as Service;
+}
+
+export async function deleteService(id: string): Promise<void> {
+  const res = await fetch(buildApiUrl(`/api/admin/services/${id}`), {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    throw new Error("Failed to delete service");
+  }
+}

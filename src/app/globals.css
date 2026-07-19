@@ -1,0 +1,1114 @@
+@import url('https://fonts.googleapis.com/css2?family=Marcellus&family=Open+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Dancing+Script:wght@400;500;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400;1,600&display=swap');
+
+/* ── Custom Thin Peacock Gradient Scrollbar ── */
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #7B3F7A transparent;
+}
+
+/* WebKit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #FD4380 0%, #7B3F7A 20%, #7675B9 40%, #605ea6 60%, #514f8c 75%, #35093C 90%, #240429 100%);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #e42a6c 0%, #663367 20%, #605ea6 40%, #514f8c 60%, #454373 75%, #35093C 90%, #240429 100%);
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 301 32% 37%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 241 33% 59%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 300 20% 96%;
+    --muted-foreground: 300 8% 45%;
+    --accent: 340 98% 63%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 300 15% 90%;
+    --input: 300 15% 90%;
+    --ring: 301 32% 37%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  html {
+    background: #fbf7f9;
+  }
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply text-foreground;
+    background:
+      radial-gradient(ellipse 80% 40% at 50% 0%, rgba(216, 158, 46, 0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 85% 100%, rgba(123, 63, 122, 0.05) 0%, transparent 55%),
+      #fbf7f9;
+    font-family: 'Open Sans', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Marcellus', serif;
+    letter-spacing: 0.015em;
+  }
+}
+
+@layer utilities {
+  .font-serif {
+    font-family: 'Marcellus', serif;
+  }
+  .font-sans {
+    font-family: 'Open Sans', sans-serif;
+  }
+  .font-inter {
+    font-family: 'Inter', sans-serif;
+  }
+  .font-script {
+    font-family: 'Dancing Script', cursive;
+  }
+  .font-crimson {
+    font-family: 'Crimson Text', serif;
+  }
+  .text-gradient-peacock {
+    background: linear-gradient(135deg, #FD4380 0%, #7B3F7A 25%, #7675B9 50%, #605ea6 75%, #514f8c 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .text-gradient-brand {
+    background: linear-gradient(135deg, #FD4380 0%, #7B3F7A 50%, #605ea6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .text-gradient-gold {
+    background: linear-gradient(135deg, #f59e0b 0%, #f97316 50%, #ef4444 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .bg-gradient-peacock {
+    background: linear-gradient(135deg, #FD4380 0%, #7B3F7A 25%, #7675B9 50%, #605ea6 75%, #514f8c 100%);
+  }
+  .bg-gradient-brand {
+    background: linear-gradient(135deg, #FD4380 0%, #7B3F7A 50%, #605ea6 100%);
+  }
+  .bg-gradient-brand-hover {
+    background: linear-gradient(135deg, #e42a6c 0%, #663367 50%, #514f8c 100%);
+  }
+  .bg-gradient-brand-light {
+    background: linear-gradient(135deg, rgba(123,63,122,0.1) 0%, rgba(118,117,185,0.1) 50%, rgba(253,67,128,0.1) 100%);
+  }
+  .bg-gradient-warm {
+    background: linear-gradient(180deg, rgba(123,63,122,0.05) 0%, rgba(253,67,128,0.05) 100%);
+  }
+  .bg-glass {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  .bg-glass-dark {
+    background: rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .border-gradient {
+    border-image: linear-gradient(135deg, #FD4380 0%, #7B3F7A 50%, #605ea6 100%) 1;
+  }
+  .shimmer {
+    background: linear-gradient(90deg, transparent, rgba(123,63,122,0.1), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes float-delayed {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-15px); }
+  }
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 10px rgba(123,63,122,0.2); }
+    50% { box-shadow: 0 0 20px rgba(123,63,122,0.4), 0 0 30px rgba(118,117,185,0.2); }
+  }
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  @keyframes slide-up {
+    0% { transform: translateY(30px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes fade-in {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  .animate-float {
+    animation: float 4s ease-in-out infinite;
+  }
+  .animate-float-delayed {
+    animation: float-delayed 4s ease-in-out infinite;
+    animation-delay: 1s;
+  }
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  .animate-gradient-shift {
+    background-size: 200% 200%;
+    animation: gradient-shift 6s ease infinite;
+  }
+  .animate-slide-up {
+    animation: slide-up 0.6s ease-out;
+  }
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out;
+  }
+}
+
+/* TipTap Editor Styles */
+.tiptap {
+  outline: none;
+}
+/* Heading/paragraph top margins exist to separate a block from whatever
+   came BEFORE it — meaningless (and just dead space) on the very first
+   child, which has nothing above it inside the block to separate from.
+   !important because .tiptap h1-h4 (same specificity) are declared later
+   in this file and would otherwise win the cascade by source order. */
+.tiptap > *:first-child {
+  margin-top: 0 !important;
+}
+/* A trailing empty paragraph is now always the user's own (the TrailingNode
+   extension that force-appended one after every widget is disabled — see
+   the StarterKit config in rich-editor.tsx). Just keep its footprint small
+   so an empty last line doesn't read as a big dead gap. */
+.tiptap > p:last-child:has(> br.ProseMirror-trailingBreak:only-child) {
+  margin-bottom: 0;
+  min-height: 0.6em;
+}
+/* Flexbox / Grid layout containers (see lib/tiptap/extensions/flex-grid.ts).
+   In the editor, the container gets a faint outline and each cell a clearly
+   visible dashed border, a light tint and a minimum height so empty cells
+   read as real, grabbable drop targets — even while empty and even under the
+   canvas's zoom. All of this is editor-only chrome scoped to `.tiptap`; the
+   public render (same renderHTML, no `.tiptap` ancestor) stays borderless and
+   transparent. */
+.tiptap [data-flexbox],
+.tiptap [data-grid] {
+  outline: 1px dashed rgba(124, 58, 237, 0.4);
+  outline-offset: 3px;
+  border-radius: 8px;
+  min-height: 64px;
+}
+.tiptap [data-flex-item],
+.tiptap [data-grid-item] {
+  box-sizing: border-box;
+  border: 1.5px dashed rgba(124, 58, 237, 0.55);
+  border-radius: 6px;
+  min-height: 60px;
+  padding: 10px;
+  background-color: rgba(124, 58, 237, 0.05);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.tiptap [data-flex-item]:hover,
+.tiptap [data-grid-item]:hover {
+  border-color: rgba(124, 58, 237, 0.9);
+  background-color: rgba(124, 58, 237, 0.1);
+}
+/* Mobile stacking for flex/grid containers that opted in (class set by
+   renderHTML from the stackOnMobile attr) — inline styles can't carry a
+   media query, so it lives here. Applies to editor previews and the public
+   page alike. */
+@media (max-width: 640px) {
+  .ve-stack-mobile[data-flexbox] {
+    flex-direction: column !important;
+  }
+  .ve-stack-mobile[data-grid] {
+    grid-template-columns: 1fr !important;
+  }
+  .ve-stack-mobile[data-grid] > [data-grid-item] {
+    grid-column: auto !important;
+    grid-row: auto !important;
+  }
+}
+
+.tiptap p.is-editor-empty:first-child::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Blog editor (uses .prose, not .tiptap) — keep content left-aligned/LTR
+   and restore the placeholder text that the .tiptap rule above can't reach. */
+.blog-editor-content {
+  direction: ltr;
+  text-align: left;
+}
+.blog-editor-content p.is-editor-empty:first-child::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.tiptap h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.75rem; line-height: 1.2; }
+.tiptap h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; margin-top: 1.5rem; line-height: 1.25; }
+.tiptap h3 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; line-height: 1.3; }
+.tiptap h4 { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 0.75rem; }
+.tiptap p { margin-bottom: 0.75rem; line-height: 1.7; }
+.tiptap ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+.tiptap ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+.tiptap li { margin-bottom: 0.25rem; }
+.tiptap code {
+  background: #f3f4f6;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+.tiptap pre code {
+  background: none;
+  padding: 0;
+}
+.tiptap a {
+  color: #514f8c;
+  text-decoration: underline;
+  /* Inside the editor, links are not tappable — use a text caret so they
+     read as editable text, not clickable links. */
+  cursor: text;
+}
+.blog-editor-content a {
+  cursor: text;
+}
+
+/* Lead-form block inside the Rich Editor: keep it non-interactive so clicking
+   selects the block (to edit it in the side panel) instead of focusing inputs. */
+.tiptap [data-lead-form] {
+  position: relative;
+}
+.tiptap [data-lead-form] input,
+.tiptap [data-lead-form] button {
+  pointer-events: none;
+}
+.tiptap [data-lead-form]::before {
+  content: "Lead form";
+  position: absolute;
+  top: -10px;
+  left: 12px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  z-index: 5;
+}
+.tiptap mark {
+  border-radius: 0.125rem;
+  padding: 0.0625rem 0.125rem;
+}
+
+/* ================================================================
+   EDITOR CANVAS – Card-like block elements with hover overlays
+   ================================================================ */
+
+/* Shared card hover effect for all major block elements */
+.tiptap div[data-two-col],
+.tiptap section[data-page-section],
+.tiptap div[data-button],
+.tiptap div[data-image-frame],
+.tiptap div[data-youtube-video],
+.tiptap blockquote,
+.tiptap pre {
+  position: relative;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+/* :not(.ProseMirror-selectednode) — hover is a weaker, separate cue from
+   selection and must not also render once an element is selected (the
+   cursor is almost always still over an element right after it's clicked),
+   or the hover ring and the selection outline below stack into two borders
+   around the same element. */
+.tiptap div[data-two-col]:hover:not(.ProseMirror-selectednode),
+.tiptap section[data-page-section]:hover:not(.ProseMirror-selectednode),
+.tiptap div[data-button]:hover:not(.ProseMirror-selectednode),
+.tiptap div[data-image-frame]:hover:not(.ProseMirror-selectednode),
+.tiptap div[data-youtube-video]:hover:not(.ProseMirror-selectednode),
+.tiptap blockquote:hover:not(.ProseMirror-selectednode),
+.tiptap pre:hover:not(.ProseMirror-selectednode) {
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25);
+  border-radius: 0.75rem;
+}
+
+/* Selected state (ProseMirror selection) — the single, consistent selection
+   treatment for every block type. Each per-type card below has its own
+   permanent/hover border for identification while unselected; once selected
+   those are neutralized here so only this one outline shows instead of
+   stacking on top of it. */
+.tiptap .ProseMirror-selectednode {
+  outline: 2px solid #8b5cf6 !important;
+  outline-offset: 2px;
+  border-radius: 0.75rem;
+  box-shadow: none !important;
+}
+.tiptap div[data-two-col].ProseMirror-selectednode,
+.tiptap section[data-page-section].ProseMirror-selectednode,
+.tiptap div[data-button].ProseMirror-selectednode,
+.tiptap div[data-image-frame].ProseMirror-selectednode,
+.tiptap div[data-youtube-video].ProseMirror-selectednode,
+.tiptap pre.ProseMirror-selectednode {
+  border-color: transparent !important;
+}
+.tiptap blockquote.ProseMirror-selectednode {
+  border-left-color: transparent !important;
+}
+
+/* Image card styling — div[data-image-frame] is the sized/clipped crop box
+   (see ResizableImage renderHTML); the <img> inside always fills it and is
+   styled entirely via its own inline style (object-fit/object-position). */
+.tiptap div[data-image-frame] {
+  max-width: 100%;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+.tiptap div[data-image-frame] img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.tiptap div[data-image-frame]:hover {
+  border-color: #c4b5fd;
+}
+
+/* Two-column layout in editor */
+.tiptap div[data-two-col] {
+  display: flex;
+  gap: 2rem;
+  margin: 1.5rem 0;
+  border-radius: 0.75rem;
+  overflow: visible;
+  border: 2px dashed #c7d2fe;
+  background: linear-gradient(135deg, rgba(238,242,255,0.3) 0%, rgba(255,255,255,0) 100%);
+}
+.tiptap div[data-two-col]:hover {
+  border-color: #818cf8;
+  background: linear-gradient(135deg, rgba(238,242,255,0.5) 0%, rgba(255,255,255,0) 100%);
+}
+.tiptap div[data-two-col]::before {
+  content: '⬡ Two-Column';
+  position: absolute;
+  top: -10px;
+  left: 12px;
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #514f8c;
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 2;
+  background: white;
+  padding: 1px 8px;
+  border-radius: 4px;
+  border: 1px solid #c7d2fe;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.tiptap div[data-col-media],
+.tiptap div[data-col-content] {
+  flex: 1;
+  min-width: 0;
+  padding: 1.5rem 1rem 1rem;
+}
+.tiptap div[data-col-media] {
+  border-right: 1px dashed #e0e7ff;
+}
+.tiptap div[data-two-col][data-layout="media-right"] {
+  flex-direction: row-reverse;
+}
+.tiptap div[data-two-col][data-layout="media-right"] div[data-col-media] {
+  border-right: none;
+  border-left: 1px dashed #e0e7ff;
+}
+.tiptap div[data-col-content] {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.tiptap div[data-col-media] div[data-image-frame],
+.tiptap div[data-col-media] iframe {
+  width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+}
+
+/* Button card styling */
+.tiptap div[data-button] {
+  margin: 1rem 0;
+  border-radius: 0.75rem;
+  padding: 4px;
+  border: 2px dashed transparent;
+}
+.tiptap div[data-button]:hover {
+  border-color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.03);
+}
+.tiptap div[data-button]::before {
+  content: '● Button';
+  position: absolute;
+  top: -10px;
+  right: 12px;
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #7c3aed;
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 2;
+  background: white;
+  padding: 1px 8px;
+  border-radius: 4px;
+  border: 1px solid #ddd6fe;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.tiptap div[data-button]:hover::before {
+  opacity: 1;
+}
+
+/* YouTube video card */
+.tiptap div[data-youtube-video] {
+  margin: 1rem 0;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 2px dashed transparent;
+}
+.tiptap div[data-youtube-video]:hover {
+  border-color: #fca5a5;
+}
+.tiptap div[data-youtube-video] iframe {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 0.5rem;
+}
+
+/* Blockquote card */
+.tiptap blockquote {
+  border-left: 4px solid #8b5cf6;
+  padding: 1rem 1.25rem;
+  margin: 1rem 0;
+  font-style: italic;
+  color: #6b7280;
+  background: linear-gradient(135deg, rgba(139,92,246,0.04) 0%, transparent 100%);
+  border-radius: 0 0.75rem 0.75rem 0;
+}
+.tiptap blockquote:hover {
+  border-left-color: #7c3aed;
+  background: linear-gradient(135deg, rgba(139,92,246,0.08) 0%, transparent 100%);
+}
+
+/* Code block card */
+.tiptap pre {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  padding: 1rem 1.25rem;
+  border-radius: 0.75rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+  font-size: 0.875rem;
+  border: 2px solid transparent;
+}
+.tiptap pre:hover {
+  border-color: #45475a;
+}
+
+/* Horizontal rule card */
+.tiptap hr {
+  border: none;
+  border-top: 2px solid #e5e7eb;
+  margin: 1.5rem 0;
+  cursor: pointer;
+}
+.tiptap hr:hover {
+  border-top-color: #8b5cf6;
+}
+
+/* Page sections in editor */
+.tiptap section[data-page-section] {
+  position: relative;
+  margin: 0.75rem -1.5rem;
+  border: 2px dashed #fbbf24;
+  border-radius: 0.75rem;
+  min-height: 80px;
+  background: linear-gradient(135deg, rgba(251,191,36,0.04) 0%, transparent 100%);
+}
+.tiptap section[data-page-section]:hover {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, rgba(251,191,36,0.08) 0%, transparent 100%);
+}
+.tiptap section[data-page-section]::before {
+  content: '◆ ' attr(data-label);
+  position: absolute;
+  top: -10px;
+  left: 12px;
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #d97706;
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 2;
+  background: white;
+  padding: 1px 8px;
+  border-radius: 4px;
+  border: 1px solid #fde68a;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.tiptap section[data-page-section] + section[data-page-section] {
+  margin-top: 0.25rem;
+}
+.tiptap section[data-page-section] h1,
+.tiptap section[data-page-section] h2,
+.tiptap section[data-page-section] h3,
+.tiptap section[data-page-section] h4 {
+  color: inherit;
+}
+.tiptap section[data-page-section] p,
+.tiptap section[data-page-section] li {
+  color: inherit;
+}
+/* Creative Effects for Homepage */
+@layer utilities {
+  .handwritten-underline {
+    position: relative;
+  }
+  
+  .handwritten-underline::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #FD4380, #7B3F7A, #7675B9);
+    border-radius: 2px;
+    opacity: 0.6;
+    transform: scaleX(0);
+    transform-origin: left;
+    animation: drawUnderline 0.8s ease-out forwards;
+  }
+  
+  .handwritten-underline-white::after {
+    background: linear-gradient(90deg, rgba(255,255,255,0.8), rgba(255,255,255,0.6), rgba(255,255,255,0.8));
+  }
+  
+  @keyframes drawUnderline {
+    to {
+      transform: scaleX(1);
+    }
+  }
+  
+  .handwritten-style {
+    font-family: 'Dancing Script', cursive;
+    font-weight: 600;
+  }
+  
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  .animate-float-delayed {
+    animation: float 6s ease-in-out infinite 3s;
+  }
+  
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+  
+  .creative-shadow {
+    box-shadow: 
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06),
+      0 0 0 1px rgba(16, 185, 129, 0.1);
+  }
+  
+  .folded-corner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(-45deg, transparent 46%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.05) 54%, transparent 54%);
+    transform: translateX(10px) translateY(-10px) rotate(45deg);
+  }
+  
+  .stamp-effect {
+    position: relative;
+  }
+  
+  .stamp-effect::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(20, 184, 166, 0.4);
+    border-radius: 50%;
+    background: rgba(20, 184, 166, 0.1);
+  }
+  
+  .organic-shape {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+  
+  .content-layer {
+    position: relative;
+    z-index: 10;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.8s ease-out forwards;
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/* ================================================================
+   HERO SLIDESHOW – Ken Burns, content animations, progress bar
+   ================================================================ */
+
+/* Ken Burns zoom effect on active slide background */
+.hero-ken-burns {
+  animation: heroKenBurns 7s ease-out forwards;
+}
+
+@keyframes heroKenBurns {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.08);
+  }
+}
+
+/* Content staggered entrance */
+.hero-slide-content .hero-content-item {
+  opacity: 0;
+  transform: translateY(25px);
+  animation: heroContentIn 0.7s ease-out forwards;
+}
+
+.hero-slide-content .hero-content-item:nth-child(1) { animation-delay: 0.15s; }
+.hero-slide-content .hero-content-item:nth-child(2) { animation-delay: 0.3s; }
+.hero-slide-content .hero-content-item:nth-child(3) { animation-delay: 0.45s; }
+.hero-slide-content .hero-content-item:nth-child(4) { animation-delay: 0.55s; }
+.hero-slide-content .hero-content-item:nth-child(5) { animation-delay: 0.65s; }
+.hero-slide-content .hero-content-item:nth-child(6) { animation-delay: 0.75s; }
+
+@keyframes heroContentIn {
+  0% {
+    opacity: 0;
+    transform: translateY(25px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Feature card entrance from right */
+.hero-feature-card {
+  opacity: 0;
+  transform: translateX(40px);
+  animation: heroCardIn 0.9s ease-out 0.4s forwards;
+}
+
+@keyframes heroCardIn {
+  0% {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Progress bar on navigation dots */
+@keyframes hero-progress {
+  0% {
+    transform: scaleX(0);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+/* Scroll indicator pulse */
+.hero-scroll-indicator {
+  animation: heroScrollPulse 2s ease-in-out infinite;
+}
+
+@keyframes heroScrollPulse {
+  0%, 100% {
+    opacity: 0.5;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+/* Hide scrollbar for horizontal scroll carousels */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Cart fly animation */
+@keyframes cart-fly {
+  0%   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  60%  { opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.3); opacity: 0; }
+}
+
+@keyframes cart-fly-scale {
+  0%   { transform: scale(1) rotate(0deg); }
+  40%  { transform: scale(1.15) rotate(-8deg); }
+  100% { transform: scale(0.4) rotate(12deg); }
+}
+
+@keyframes cart-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.45); }
+  70%  { transform: scale(0.88); }
+  100% { transform: scale(1); }
+}
+
+.cart-icon-pop {
+  animation: cart-pop 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Cart item remove animation */
+@keyframes cart-item-shake {
+  0%   { transform: translateX(0); }
+  20%  { transform: translateX(-6px) rotate(-1.5deg); }
+  40%  { transform: translateX(6px) rotate(1.5deg); }
+  60%  { transform: translateX(-4px) rotate(-1deg); }
+  80%  { transform: translateX(4px) rotate(1deg); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes cart-item-exit {
+  0%   { transform: scale(1) translateX(0); opacity: 1; max-height: 120px; margin-bottom: 0.75rem; }
+  30%  { transform: scale(0.97) translateX(8px); opacity: 0.8; }
+  100% { transform: scale(0.85) translateX(60px); opacity: 0; max-height: 0; margin-bottom: 0; padding: 0; }
+}
+
+.cart-item-removing {
+  animation: cart-item-shake 250ms ease-out, cart-item-exit 400ms ease-in 250ms forwards;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Rich-editor content blocks (feature grid, stats, FAQ, testimonials,
+ * marquee, gallery). These classes are emitted by the TipTap node renderHTML
+ * and shared by BOTH the editor canvas and the published page, so they live in
+ * globals.css (loaded in both contexts) rather than inline styles which cannot
+ * express media queries or keyframes.
+ * ------------------------------------------------------------------------- */
+.rb-container {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+/* Content-block sections must never exceed their column or introduce a
+ * horizontal scrollbar — keeps the editor canvas a fixed size as blocks are
+ * inserted / selected. */
+section[data-feature-grid],
+section[data-stats-row],
+section[data-faq-accordion],
+section[data-testimonial-cards],
+section[data-image-gallery],
+div[data-marquee-strip] {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+.rb-grid {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.rb-grid > * {
+  min-width: 0;
+}
+.rb-grid-1 { grid-template-columns: 1fr; }
+.rb-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rb-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.rb-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 900px) {
+  .rb-grid-3,
+  .rb-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .rb-grid-2,
+  .rb-grid-3,
+  .rb-grid-4 { grid-template-columns: 1fr; }
+}
+
+/* Stats row */
+.rb-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px 40px;
+}
+
+/* Marquee strip.
+ * The scrolling track is absolutely positioned so its (very wide) intrinsic
+ * content is taken OUT of normal flow — it can never widen the wrapper, the
+ * editor canvas, or the page. The wrapper is a fixed-height clipping box. */
+.rb-marquee {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  height: 44px;
+}
+.rb-marquee-track {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  will-change: transform;
+  animation-name: rb-marquee-scroll;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes rb-marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-33.333%); }
+}
+
+/* FAQ accordion (native <details>) */
+.rb-faq summary { list-style: none; }
+.rb-faq summary::-webkit-details-marker { display: none; }
+.rb-faq-item > summary .rb-faq-icon {
+  transition: transform 0.2s ease;
+}
+.rb-faq-item[open] > summary .rb-faq-icon {
+  transform: rotate(45deg);
+}
+
+/* ===== Universal Visual Editor Styles ===== */
+
+/* Button Hover Style via CSS Custom Properties */
+div[data-button] a {
+  transition: all var(--btn-transition-duration, 200ms) ease !important;
+}
+div[data-button] a:hover {
+  background-color: var(--btn-hover-bg) !important;
+  color: var(--btn-hover-color) !important;
+  transform: var(--btn-hover-scale) !important;
+  box-shadow: var(--btn-hover-shadow) !important;
+}
+
+/* Image Hover Effects */
+.ve-hover-zoom {
+  transition: all 0.3s ease !important;
+}
+.ve-hover-zoom:hover {
+  transform: scale(1.05) !important;
+}
+
+.ve-hover-fade {
+  transition: all 0.3s ease !important;
+}
+.ve-hover-fade:hover {
+  opacity: 0.75 !important;
+}
+
+.ve-hover-tilt {
+  transition: all 0.3s ease !important;
+}
+.ve-hover-tilt:hover {
+  transform: rotate(2deg) scale(1.02) !important;
+}
+
+/* Page Entry Animations */
+.ve-animate {
+  animation-fill-mode: both !important;
+}
+
+.ve-animate-fade-in {
+  animation-name: ve-fade-in !important;
+}
+
+.ve-animate-slide-up {
+  animation-name: ve-slide-up !important;
+}
+
+.ve-animate-slide-left {
+  animation-name: ve-slide-left !important;
+}
+
+.ve-animate-zoom-in {
+  animation-name: ve-zoom-in !important;
+}
+
+.ve-animate-bounce {
+  animation-name: ve-bounce !important;
+}
+
+@keyframes ve-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ve-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ve-slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes ve-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes ve-bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-20px);
+  }
+  60% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Product Card Custom Visual Styles */
+.ve-product-card {
+  transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ve-product-card:hover {
+  border-color: var(--card-hover-border) !important;
+  box-shadow: var(--card-hover-shadow) !important;
+}
+
+.ve-product-card-btn {
+  transition: all 200ms ease;
+}
+.ve-product-card-btn:hover {
+  background-color: var(--btn-hover-bg) !important;
+  color: var(--btn-hover-text) !important;
+}
+
+/* Shop Responsive Grid columns */
+.ve-shop-grid {
+  grid-template-columns: repeat(var(--cols-mobile, 2), minmax(0, 1fr)) !important;
+}
+@media (min-width: 640px) {
+  .ve-shop-grid {
+    grid-template-columns: repeat(var(--cols-tablet, 3), minmax(0, 1fr)) !important;
+  }
+}
+@media (min-width: 1024px) {
+  .ve-shop-grid {
+    grid-template-columns: repeat(var(--cols-desktop, 4), minmax(0, 1fr)) !important;
+  }
+}
+

@@ -1,0 +1,334 @@
+import Image from "next/image";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Metadata } from "next";
+import { ProductMediaGallery } from "@/components/storefront/product-media-gallery";
+import { ProductPurchasePanel } from "@/components/storefront/product-purchase-panel";
+import { ProductCard } from "@/components/storefront/product-card";
+import { Header } from "@/components/storefront/header";
+import { Footer } from "@/components/storefront/footer";
+import { CustomerAuthProvider } from "@/lib/customer-auth-context";
+import { formatPrice } from "@/lib/utils";
+import { CheckCircle2, Package, ShieldCheck, Zap } from "lucide-react";
+import connectDB from "@/lib/mongodb";
+import ShopSettings from "@/models/ShopSettings";
+import { siteConfig } from "@/config/site.config";
+
+function resolveBaseUrl() {
+  if (typeof window !== "undefined") return "";
+  if (process.env.NODE_ENV === "production") {
+    if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "");
+    const vercelUrl = process.env.VERCEL_URL;
+    if (vercelUrl) return vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
+    return siteConfig.domain;
+  }
+  const envUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  if (envUrl) return envUrl.replace(/\/$/, "");
+  return "http://localhost:3000";
+}
+
+async function fetchJson(url: string) {
+  try {
+    const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+async function fetchProduct(slugOrId: string) {
+  if (!slugOrId || slugOrId === "undefined") return null;
+  const baseUrl = resolveBaseUrl();
+  const slugData = await fetchJson(`${baseUrl}/api/products/slug/${slugOrId}`);
+  if (slugData?.product) return slugData.product;
+  const idData = await fetchJson(`${baseUrl}/api/products/${slugOrId}`);
+  return idData?.product || null;
+}
+
+async function fetchRelatedProducts(categoryId?: string, excludeId?: string) {
+  if (!categoryId) return [];
+  const baseUrl = resolveBaseUrl();
+  const data = await fetchJson(`${baseUrl}/api/products?categoryId=${categoryId}&limit=6`);
+  if (!data?.products) return [];
+  return data.products.filter((p: any) => p.id !== excludeId).slice(0, 4);
+}
+
+interface ProductParams {
+  params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: ProductParams): Promise<Metadata> {
+  const { slug } = await params;
+  const product = await fetchProduct(slug);
+  if (!product) return { title: `Product Not Found | ${siteConfig.name}` };
+  return {
+    title: `${product.name} | ${siteConfig.name}`,
+    description: product.meta_description || product.short_description || product.description,
+    alternates: { canonical: `/product/${product.slug}` },
+    openGraph: {
+      title: `${product.name} | ${siteConfig.name}`,
+      description: product.meta_description || product.short_description,
+      images: product.featured_image ? [product.featured_image] : undefined,
+    },
+  };
+}
+
+const trustBadges = [
+  { icon: Zap, label: "Fast delivery" },
+  { icon: ShieldCheck, label: "100% authentic" },
+  { icon: Package, label: "Secure packaging" },
+];
+
+export default async function ProductPage({ params }: ProductParams) {
+  try {
+    const { slug } = await params;
+    const product = await fetchProduct(slug);
+    if (!product) notFound();
+
+    await connectDB();
+    const settingsDoc = await ShopSettings.findOne().sort({ updated_at: -1 }).lean();
+    const settings = settingsDoc ? JSON.parse(JSON.stringify(settingsDoc)) : undefined;
+
+    const images = product.images?.length
+      ? product.images
+      : product.featured_image
+      ? [product.featured_image]
+      : [];
+
+    const price = product.sale_price && product.sale_price < product.price
+      ? product.sale_price
+      : product.price;
+
+    const relatedProducts = await fetchRelatedProducts(product.category?.id, product.id);
+    const productShareUrl = `${resolveBaseUrl()}/product/${product.slug}`;
+
+    const specs = [
+      product.category?.name && { label: "Category", value: product.category.name },
+      product.weight && { label: "Weight", value: `${product.weight} kg` },
+    ].filter(Boolean) as { label: string; value: string }[];
+
+    return (
+      <CustomerAuthProvider>
+        <div className="min-h-screen flex flex-col bg-white">
+          <Header />
+          <main className="flex-1 pt-20 sm:pt-[82px] pb-10 sm:pb-16">
+            {/* Breadcrumb */}
+            <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-4">
+              <nav className="flex items-center gap-2 text-xs text-gray-400 uppercase tracking-widest">
+                <Link href="/" className="hover:text-gray-700 transition">Home</Link>
+                <span>/</span>
+                <Link href="/shop" className="hover:text-gray-700 transition">Shop</Link>
+                {product.category?.name && (
+                  <>
+                    <span>/</span>
+                    <span className="text-gray-500">{product.category.name}</span>
+                  </>
+                )}
+              </nav>
+            </div>
+
+            {/* Main product section */}
+            <section className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8">
+              <div className="grid gap-5 sm:gap-10 lg:grid-cols-[480px_1fr] items-stretch">
+                <div className="flex flex-col gap-4 sm:gap-6 h-full">
+                  <ProductMediaGallery images={images} name={product.name} />
+
+                  {specs.length > 0 && (
+                    <div className="mt-auto bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-2.5 sm:p-3 space-y-1.5">
+                      <p className="text-[9px] sm:text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
+                        Product Specs
+                      </p>
+                      <dl className="space-y-1">
+                        {specs.map((spec) => (
+                          <div key={spec.label} className="flex justify-between gap-2 border-b border-gray-50 pb-1 last:border-b-0 last:pb-0">
+                            <dt className="text-[10px] sm:text-[11px] text-gray-400">{spec.label}</dt>
+                            <dd className="text-[10px] sm:text-[11px] font-medium text-gray-800">{spec.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-4 sm:gap-6 h-full">
+                  {/* Category + Name */}
+                  <div className="space-y-1.5 sm:space-y-2">
+                    {product.category?.name && (
+                      <span className="inline-block text-[11px] uppercase tracking-[0.35em] text-emerald-600 font-semibold">
+                        {product.category.name}
+                      </span>
+                    )}
+                    <h1
+                      className="text-2xl sm:text-4xl text-[#35093C] leading-tight"
+                      style={{ fontFamily: "'Marcellus', serif", fontWeight: 600 }}
+                    >
+                      {product.name}
+                    </h1>
+                    {product.short_description && (
+                      <p className="text-sm sm:text-base text-gray-500 leading-relaxed whitespace-pre-line">
+                        {product.short_description}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Highlights */}
+                  {product.highlights?.length > 0 && (
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <p className="text-sm font-semibold text-[#35093C] uppercase tracking-wider">
+                        Why you'll love it
+                      </p>
+                      <ul className="space-y-1 sm:space-y-1.5">
+                        {product.highlights.map((item: string) => (
+                          <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Purchase panel */}
+                  <ProductPurchasePanel
+                    productId={product.id}
+                    basePrice={price}
+                    compareAtPrice={product.price}
+                    stockStatus={product.stock_status}
+                    variants={product.variants}
+                    productMeta={{
+                      id: product.id,
+                      name: product.name,
+                      slug: product.slug,
+                      image: product.featured_image || images[0],
+                      shortDescription: product.short_description,
+                      category: (product.category?.slug as any) || "general",
+                    }}
+                    shareUrl={productShareUrl}
+                  />
+
+                  {/* Trust badges */}
+                  <div className="mt-auto grid grid-cols-3 gap-2 sm:gap-3 pt-1 sm:pt-2">
+                    {trustBadges.map(({ icon: Icon, label }) => (
+                      <div
+                        key={label}
+                        className="flex flex-col items-center gap-1 sm:gap-1.5 rounded-xl sm:rounded-2xl bg-white border border-gray-100 p-2 sm:p-3 text-center"
+                      >
+                        <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600" />
+                        <span className="text-[9px] sm:text-[10px] text-gray-500 leading-tight">{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Description */}
+            {product.description && (
+              <section className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 mt-6 sm:mt-12">
+                <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-4 sm:p-8">
+                  <h2
+                    className="text-lg sm:text-xl text-[#35093C] mb-3 sm:mb-4"
+                    style={{ fontFamily: "'Marcellus', serif", fontWeight: 600 }}
+                  >
+                    Description
+                  </h2>
+                  {(() => {
+                    const isPlainText = !/<[a-z][\s\S]*>/i.test(product.description);
+                    const html = isPlainText
+                      ? product.description.split("\n").map((line: string) => `<p>${line || "&nbsp;"}</p>`).join("")
+                      : product.description;
+                    return (
+                      <div
+                        className="prose prose-neutral max-w-none text-gray-600 prose-sm sm:prose-base"
+                        dangerouslySetInnerHTML={{ __html: html }}
+                      />
+                    );
+                  })()}
+                </div>
+              </section>
+            )}
+
+            {/* Care instructions — Product Specs now sits under the product
+                image in the main grid above. */}
+            {product.care_instructions && (
+              <section className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 mt-4 sm:mt-8">
+                <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-4 sm:p-6 space-y-3">
+                  <h2
+                    className="text-base sm:text-lg text-[#35093C]"
+                    style={{ fontFamily: "'Marcellus', serif", fontWeight: 600 }}
+                  >
+                    Care Instructions
+                  </h2>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    {product.care_instructions}
+                  </p>
+                </div>
+              </section>
+            )}
+
+            {/* Related products */}
+            {relatedProducts.length > 0 && (
+              <section className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 mt-8 sm:mt-14 space-y-4 sm:space-y-6">
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.4em] text-gray-400">You may also like</p>
+                    <h2
+                      className="text-xl sm:text-3xl text-[#35093C] mt-1"
+                      style={{ fontFamily: "'Marcellus', serif", fontWeight: 600 }}
+                    >
+                      Related Products
+                    </h2>
+                  </div>
+                  <Link href="/shop" className="text-sm font-semibold text-emerald-600 hover:underline">
+                    View all
+                  </Link>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+                  {relatedProducts.map((item: any, i: number) => {
+                    const itemPrice = item.sale_price && item.sale_price < item.price
+                      ? item.sale_price
+                      : item.price;
+                    const originalPrice = item.sale_price && item.sale_price < item.price
+                      ? item.price
+                      : undefined;
+                    return (
+                      <ProductCard
+                        key={item.id}
+                        index={i}
+                        settings={settings}
+                        product={{
+                          id: item.id,
+                          name: item.name,
+                          slug: item.slug,
+                          image: item.featured_image || item.images?.[0] || "",
+                          price: itemPrice,
+                          originalPrice,
+                          shortDescription: item.short_description,
+                          category: item.category?.name,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+          </main>
+          <Footer />
+        </div>
+      </CustomerAuthProvider>
+    );
+  } catch (error) {
+    console.error("ProductPage error:", error);
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Something went wrong</h1>
+          <Link href="/shop" className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-full hover:opacity-90">
+            Browse Products
+          </Link>
+        </div>
+      </div>
+    );
+  }
+}

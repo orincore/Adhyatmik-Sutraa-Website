@@ -1,0 +1,411 @@
+"use client";
+
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import type { JSONContent } from "@tiptap/core";
+import { generateHTML } from "@tiptap/html";
+import StarterKit from "@tiptap/starter-kit";
+import Link from "@tiptap/extension-link";
+import { YoutubeEmbed } from "@/lib/tiptap/extensions/youtube-embed";
+import TextAlign from "@tiptap/extension-text-align";
+import Underline from "@tiptap/extension-underline";
+import Color from "@tiptap/extension-color";
+import { TextStyle } from "@tiptap/extension-text-style";
+import Highlight from "@tiptap/extension-highlight";
+import FontFamily from "@tiptap/extension-font-family";
+import { ResizableImage } from "@/lib/tiptap/extensions/resizable-image";
+import { CustomButton } from "@/lib/tiptap/extensions/custom-button";
+import { FontSize } from "@/lib/tiptap/extensions/font-size";
+import {
+  TwoColumnSection,
+  ColumnMedia,
+  ColumnContent,
+} from "@/lib/tiptap/extensions/two-column";
+import { PageSection } from "@/lib/tiptap/extensions/page-section";
+import {
+  FlexboxContainer,
+  FlexItem,
+  GridContainer,
+  GridItem,
+} from "@/lib/tiptap/extensions/flex-grid";
+import { LeadForm } from "@/lib/tiptap/extensions/lead-form";
+import { FeatureGrid } from "@/lib/tiptap/extensions/feature-grid";
+import { StatsRow } from "@/lib/tiptap/extensions/stats-row";
+import { FaqAccordion } from "@/lib/tiptap/extensions/faq-accordion";
+import { TestimonialCards } from "@/lib/tiptap/extensions/testimonial-cards";
+import { MarqueeStrip } from "@/lib/tiptap/extensions/marquee-strip";
+import { ImageGallery } from "@/lib/tiptap/extensions/image-gallery";
+import {
+  normalizeLandingContent,
+  DEFAULT_CONTENT_SETTINGS,
+  type LandingContentSettings,
+} from "@/lib/tiptap/content";
+
+interface DynamicPageRendererProps {
+  content: any;
+  theme: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    background: string;
+  };
+  title: string;
+  pageSlug?: string;
+  landingPageId?: string;
+  // True when this renders a single small block inside a larger page (the
+  // admin canvas's static preview of an unfocused rich block) rather than
+  // an entire standalone page — skips the min-h-screen the root otherwise
+  // gets, which would otherwise force every such block to full-viewport
+  // height regardless of how little content it actually holds.
+  embedded?: boolean;
+}
+
+const extensions = [
+  StarterKit.configure({
+    heading: { levels: [1, 2, 3, 4] },
+  }),
+  ResizableImage.configure({
+    HTMLAttributes: {
+      class: "rounded-lg max-w-full",
+    },
+  }),
+  Link.configure({
+    openOnClick: true,
+    HTMLAttributes: {
+      class: "underline cursor-pointer",
+    },
+  }),
+  YoutubeEmbed.configure({
+    width: 640,
+    height: 360,
+  }),
+  TextAlign.configure({
+    types: ["heading", "paragraph"],
+  }),
+  Underline,
+  Color,
+  TextStyle,
+  FontFamily,
+  Highlight.configure({
+    multicolor: true,
+  }),
+  CustomButton,
+  FontSize,
+  TwoColumnSection,
+  ColumnMedia,
+  ColumnContent,
+  FlexboxContainer,
+  FlexItem,
+  GridContainer,
+  GridItem,
+  PageSection,
+  LeadForm,
+  FeatureGrid,
+  StatsRow,
+  FaqAccordion,
+  TestimonialCards,
+  MarqueeStrip,
+  ImageGallery,
+];
+
+const FALLBACK_DOC: JSONContent = {
+  type: "doc",
+  content: [
+    {
+      type: "paragraph",
+      content: [{ type: "text", text: "\u00A0" }],
+    },
+  ],
+};
+
+function sanitizeEmptyTextNodes(node?: JSONContent | null): JSONContent | null {
+  if (!node) return null;
+
+  if (node.type === "text") {
+    const textValue =
+      typeof node.text === "string" && node.text.length > 0
+        ? node.text
+        : "\u00A0";
+    return { ...node, text: textValue };
+  }
+
+  if (Array.isArray(node.content)) {
+    const cleanedContent = (node.content ?? [])
+      .map((child) => sanitizeEmptyTextNodes(child))
+      .filter((child): child is JSONContent => Boolean(child));
+
+    return {
+      ...node,
+      content: cleanedContent,
+    };
+  }
+
+  return node;
+}
+
+export function DynamicPageRenderer({
+  content,
+  theme,
+  title,
+  pageSlug,
+  landingPageId,
+  embedded,
+}: DynamicPageRendererProps) {
+  const [isClient, setIsClient] = useState(false);
+  const articleRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Normalize content to extract doc + settings
+  const normalized = useMemo(() => normalizeLandingContent(content), [content]);
+  const settings: LandingContentSettings = {
+    ...DEFAULT_CONTENT_SETTINGS,
+    ...normalized.settings,
+  };
+  const doc = normalized.doc;
+
+  const sanitizedDoc = useMemo(() => {
+    if (doc && typeof doc === "object") {
+      const cleaned = sanitizeEmptyTextNodes(doc);
+      if (cleaned?.type === "doc") {
+        return cleaned;
+      }
+    }
+    return FALLBACK_DOC;
+  }, [doc]);
+
+  const html = useMemo(() => {
+    if (!isClient) return "";
+    try {
+      if (sanitizedDoc && typeof sanitizedDoc === "object" && sanitizedDoc.type === "doc") {
+        return generateHTML(sanitizedDoc, extensions);
+      }
+      if (typeof content === "string") {
+        return content;
+      }
+    } catch (e) {
+      console.error("Failed to render page content:", e);
+    }
+    return "<p>Failed to load page content.</p>";
+  }, [sanitizedDoc, content, isClient]);
+
+  const safeHtml = html || "<p>Failed to load page content.</p>";
+
+  // Hydrate any lead-capture forms rendered from the static HTML so they
+  // actually submit to /api/invitations (the HTML itself is non-interactive).
+  useEffect(() => {
+    if (!isClient) return;
+    const root = articleRef.current;
+    if (!root) return;
+    const forms = Array.from(
+      root.querySelectorAll<HTMLFormElement>("[data-lead-form] form")
+    );
+    const cleanups: Array<() => void> = [];
+
+    forms.forEach((form) => {
+      const wrapper = form.closest("[data-lead-form]") as HTMLElement | null;
+      const msg = form.querySelector("[data-lead-form-message]") as HTMLElement | null;
+      const btn = form.querySelector("[data-lead-form-submit]") as HTMLButtonElement | null;
+      const originalBtnText = btn?.textContent || "Sign Up";
+
+      const showError = (text: string) => {
+        if (!msg) return;
+        msg.style.display = "block";
+        msg.style.background = "#fef2f2";
+        msg.style.color = "#b91c1c";
+        msg.textContent = text;
+      };
+
+      const handler = async (e: Event) => {
+        e.preventDefault();
+        const data: Record<string, string> = {};
+        form.querySelectorAll<HTMLInputElement>("[data-field]").forEach((input) => {
+          data[input.getAttribute("data-field")!] = input.value.trim();
+        });
+
+        if (!data.firstName || !data.email || !data.whatsapp) {
+          showError("Please fill in your name, email and mobile number.");
+          return;
+        }
+
+        if (btn) { btn.disabled = true; btn.textContent = "Submitting..."; }
+        if (msg) msg.style.display = "none";
+
+        try {
+          const res = await fetch("/api/invitations", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              firstName: data.firstName,
+              email: data.email,
+              whatsappNumber: `${data.countryCode || "+91"}${data.whatsapp}`,
+              location: data.location || "",
+              landingPageSlug: pageSlug || "",
+              landingPageId: landingPageId || "",
+            }),
+          });
+          if (!res.ok) throw new Error("request failed");
+          const success = wrapper?.getAttribute("data-success") || "Thank you! Your details have been received.";
+          form.innerHTML =
+            `<div style="text-align:center;padding:20px;color:#c01b58;font-weight:600;font-size:1rem">${success}</div>`;
+        } catch {
+          showError("Something went wrong. Please try again.");
+          if (btn) { btn.disabled = false; btn.textContent = originalBtnText; }
+        }
+      };
+
+      form.addEventListener("submit", handler);
+      cleanups.push(() => form.removeEventListener("submit", handler));
+    });
+
+    return () => cleanups.forEach((fn) => fn());
+  }, [isClient, safeHtml, pageSlug, landingPageId]);
+
+  // Use settings background if set, otherwise fall back to theme background
+  const pageBg = settings.backgroundColor !== "#FFFFFF"
+    ? settings.backgroundColor
+    : (theme.background || "#FFFFFF");
+
+  return (
+    <div
+      className={embedded ? undefined : "min-h-screen"}
+      style={{ backgroundColor: pageBg }}
+    >
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            .dynamic-page a { color: ${theme.primary}; }
+            .dynamic-page a:hover { color: ${theme.secondary}; }
+            .dynamic-page h1, .dynamic-page h2, .dynamic-page h3, .dynamic-page h4 {
+              color: ${theme.primary};
+              font-family: 'Marcellus', serif;
+            }
+            .dynamic-page h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; line-height: 1.2; }
+            .dynamic-page h2 { font-size: 2rem; font-weight: 700; margin-bottom: 0.75rem; margin-top: 2rem; line-height: 1.25; }
+            .dynamic-page h3 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1.5rem; line-height: 1.3; }
+            .dynamic-page h4 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+            /* These top margins separate a block from whatever came BEFORE
+               it — meaningless (just dead space) on the first child, which
+               has nothing above it inside this content area. */
+            .dynamic-page > *:first-child { margin-top: 0 !important; }
+            /* The live editor keeps a trailing empty paragraph so users
+               always have somewhere to click and keep typing — this static
+               (non-editing) render has no cursor to place, so it's pure
+               dead space here and can be collapsed outright. */
+            .dynamic-page > p:empty { display: none; }
+            .dynamic-page p { margin-bottom: 1rem; line-height: 1.75; color: #374151; }
+            .dynamic-page ul, .dynamic-page ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+            .dynamic-page ul { list-style-type: disc; }
+            .dynamic-page ol { list-style-type: decimal; }
+            .dynamic-page li { margin-bottom: 0.25rem; line-height: 1.75; color: #374151; }
+            .dynamic-page blockquote {
+              border-left: 4px solid ${theme.accent};
+              padding-left: 1rem;
+              margin: 1.5rem 0;
+              font-style: italic;
+              color: #6B7280;
+            }
+            .dynamic-page img {
+              height: auto;
+              border-radius: 0.75rem;
+            }
+            .dynamic-page hr {
+              border: none;
+              border-top: 2px solid ${theme.accent}33;
+              margin: 2rem 0;
+            }
+            .dynamic-page pre {
+              background: #1F2937;
+              color: #F9FAFB;
+              padding: 1rem;
+              border-radius: 0.5rem;
+              overflow-x: auto;
+              margin: 1rem 0;
+            }
+            .dynamic-page code {
+              background: ${theme.primary}10;
+              color: ${theme.primary};
+              padding: 0.125rem 0.375rem;
+              border-radius: 0.25rem;
+              font-size: 0.875rem;
+            }
+            .dynamic-page pre code {
+              background: none;
+              color: inherit;
+              padding: 0;
+            }
+            .dynamic-page iframe {
+              width: 100%;
+              aspect-ratio: 16/9;
+              border-radius: 0.75rem;
+              margin: 1.5rem 0;
+            }
+            .dynamic-page div[data-youtube-video] {
+              margin: 1.5rem 0;
+            }
+            .dynamic-page div[data-youtube-video] iframe {
+              width: 100%;
+              aspect-ratio: 16/9;
+              border-radius: 0.75rem;
+            }
+            .dynamic-page div[data-button] a:hover {
+              opacity: 0.9;
+              transform: translateY(-1px);
+            }
+            .dynamic-page section[data-page-section] {
+              margin: 0;
+            }
+            .dynamic-page section[data-page-section] h1,
+            .dynamic-page section[data-page-section] h2,
+            .dynamic-page section[data-page-section] h3,
+            .dynamic-page section[data-page-section] h4 {
+              color: inherit;
+            }
+            .dynamic-page section[data-page-section] p,
+            .dynamic-page section[data-page-section] li,
+            .dynamic-page section[data-page-section] blockquote {
+              color: inherit;
+            }
+            .dynamic-page div[data-two-col] {
+              flex-wrap: wrap;
+            }
+            .dynamic-page div[data-col-media] img,
+            .dynamic-page div[data-col-media] iframe {
+              width: 100%;
+              height: auto;
+              border-radius: 0.75rem;
+            }
+            .dynamic-page div[data-col-content] h1,
+            .dynamic-page div[data-col-content] h2,
+            .dynamic-page div[data-col-content] h3 {
+              color: ${theme.primary};
+            }
+            @media (max-width: 768px) {
+              .dynamic-page h1 { font-size: 1.875rem; }
+              .dynamic-page h2 { font-size: 1.5rem; }
+              .dynamic-page h3 { font-size: 1.25rem; }
+              .dynamic-page div[data-two-col] {
+                flex-direction: column !important;
+              }
+              .dynamic-page div[data-col-media],
+              .dynamic-page div[data-col-content] {
+                flex: unset !important;
+                width: 100% !important;
+              }
+            }
+          `,
+        }}
+      />
+      <article
+        ref={articleRef}
+        className="dynamic-page mx-auto"
+        style={{
+          maxWidth: `${settings.maxWidth}px`,
+          padding: `${settings.paddingY}px ${settings.paddingX}px`,
+        }}
+        dangerouslySetInnerHTML={{ __html: isClient ? safeHtml : "<p>Loading...</p>" }}
+      />
+    </div>
+  );
+}

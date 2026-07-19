@@ -1,0 +1,1349 @@
+"use client";
+
+import React, { useState, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, Upload, X, Plus, Image as ImageIcon, Video, BookOpen, FileText, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import type { Category } from "@/lib/ecommerce-types";
+import Image from "next/image";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ProductDescriptionEditor } from "@/components/admin/product-description-editor";
+import ReactCrop, { type Crop } from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
+
+interface MediaFile {
+  id: string;
+  url: string;
+  type: "image" | "video";
+  file?: File;
+}
+
+export default function CreateProductPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const editingProductId = searchParams.get("productId");
+  const isEditing = Boolean(editingProductId);
+  const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [initializingProduct, setInitializingProduct] = useState(Boolean(editingProductId));
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [uploadingEbook, setUploadingEbook] = useState(false);
+  const ebookFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Cropper Queue States
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
+  const [currentCropFile, setCurrentCropFile] = useState<File | null>(null);
+  const [cropImgSrc, setCropImgSrc] = useState<string>("");
+  const [crop, setCrop] = useState<Crop>();
+  const [aspect, setAspect] = useState<number | undefined>(1); // Default aspect ratio 1:1
+  const [editingMediaId, setEditingMediaId] = useState<string | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [newCategory, setNewCategory] = useState({
+    name: "",
+    slug: "",
+    description: "",
+    image_url: "",
+  });
+
+  const [formData, setFormData] = useState({
+    name: "",
+    slug: "",
+    description: "",
+    short_description: "",
+    price: "",
+    sale_price: "",
+    cost_price: "",
+    sku: "",
+    stock_quantity: "0",
+    stock_status: "in_stock",
+    manage_stock: true,
+    category_id: "",
+    featured_image: "",
+    is_featured: false,
+    is_active: true,
+    weight: "",
+    dimensions: {
+      length: "",
+      width: "",
+      height: "",
+    },
+    tags: "",
+    highlights: "",
+    additional_info: [] as { label: string; value: string }[],
+    care_instructions: "",
+    meta_title: "",
+    meta_description: "",
+    homepage_section: "featured",
+    is_ebook: false,
+    ebook_file_url: "",
+    ebook_link: "",
+  });
+
+  useEffect(() => {
+    if (editingProductId) {
+      // Load categories and product in parallel, set form data after both resolve
+      Promise.all([
+        fetch("/api/categories").then(r => r.json()).catch(() => ({ categories: [] })),
+        fetch(`/api/products/${editingProductId}`).then(r => r.json()).catch(() => null),
+      ]).then(([catData, prodData]) => {
+        setCategories(catData.categories || []);
+        if (prodData?.product) {
+          setFormData(getFormDataFromProduct(prodData.product));
+          setMediaFiles(buildMediaFilesFromProduct(prodData.product));
+        } else {
+          toast.error("Unable to load product");
+          router.push("/admin/ecommerce/products");
+        }
+        setInitializingProduct(false);
+      });
+    } else {
+      loadCategories();
+    }
+  }, [editingProductId]);
+
+  async function loadCategories() {
+    try {
+      const res = await fetch("/api/categories");
+      const data = await res.json();
+      setCategories(data.categories || []);
+    } catch (err) {
+      toast.error("Failed to load categories");
+    }
+  }
+
+  function buildMediaFilesFromProduct(product: any): MediaFile[] {
+    const files: MediaFile[] = [];
+    const seen = new Set<string>();
+    const append = (url?: string) => {
+      if (!url || seen.has(url)) return;
+      const isVideo = /\.(mp4|webm|mov)$/i.test(url);
+      files.push({
+        id: `existing-${files.length}`,
+        url,
+        type: isVideo ? "video" : "image",
+      });
+      seen.add(url);
+    };
+
+    (product.images || []).forEach((url: string) => append(url));
+    append(product.featured_image);
+    return files;
+  }
+
+  function getFormDataFromProduct(product: any) {
+    return {
+      name: product.name || "",
+      slug: product.slug || "",
+      description: product.description || "",
+      short_description: product.short_description || "",
+      price: product.price ? product.price.toString() : "",
+      sale_price: product.sale_price ? product.sale_price.toString() : "",
+      cost_price: product.cost_price ? product.cost_price.toString() : "",
+      sku: product.sku || "",
+      stock_quantity: product.stock_quantity?.toString() || "0",
+      stock_status: product.stock_status || "in_stock",
+      manage_stock: product.manage_stock ?? true,
+      category_id: product.category?.id || product.category_id_str || (typeof product.category_id === "string" ? product.category_id : "") ,
+      featured_image: product.featured_image || "",
+      is_featured: product.is_featured ?? false,
+      is_active: product.is_active ?? true,
+      weight: product.weight ? product.weight.toString() : "",
+      dimensions: {
+        length: product.dimensions?.length ? product.dimensions.length.toString() : "",
+        width: product.dimensions?.width ? product.dimensions.width.toString() : "",
+        height: product.dimensions?.height ? product.dimensions.height.toString() : "",
+      },
+      tags: Array.isArray(product.tags) ? product.tags.join(", ") : product.tags || "",
+      highlights: Array.isArray(product.highlights) ? product.highlights.join("\n") : product.highlights || "",
+      additional_info: Array.isArray(product.additional_info) ? product.additional_info : [],
+      care_instructions: product.care_instructions || "",
+      meta_title: product.meta_title || "",
+      meta_description: product.meta_description || "",
+      homepage_section: product.homepage_section || "featured",
+      is_ebook: product.is_ebook ?? false,
+      ebook_file_url: product.ebook_file_url || "",
+      ebook_link: product.ebook_link || "",
+    };
+  }
+
+  async function loadProductForEdit(productId: string) {
+    try {
+      setInitializingProduct(true);
+      const res = await fetch(`/api/products/${productId}`);
+      if (!res.ok) {
+        throw new Error("Failed to load product");
+      }
+      const data = await res.json();
+      const product = data.product;
+      setFormData(getFormDataFromProduct(product));
+      setMediaFiles(buildMediaFilesFromProduct(product));
+    } catch (err: any) {
+      toast.error(err.message || "Unable to load product");
+      router.push("/admin/ecommerce/products");
+    } finally {
+      setInitializingProduct(false);
+    }
+  }
+
+  function handleChange(field: string, value: any) {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function handleDimensionChange(field: string, value: string) {
+    setFormData((prev) => ({
+      ...prev,
+      dimensions: { ...prev.dimensions, [field]: value },
+    }));
+  }
+
+  function generateSlug(name: string) {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+  }
+
+  function handleNewCategoryChange(field: string, value: string) {
+    setNewCategory((prev) => ({ ...prev, [field]: value }));
+    if (field === "name" && !newCategory.slug) {
+      setNewCategory((prev) => ({ ...prev, slug: generateSlug(value) }));
+    }
+  }
+
+  async function handleCreateCategory(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newCategory.name) {
+      toast.error("Category name is required");
+      return;
+    }
+    setCreatingCategory(true);
+    try {
+      const payload = {
+        name: newCategory.name,
+        slug: newCategory.slug || generateSlug(newCategory.name),
+        description: newCategory.description,
+        image_url: newCategory.image_url,
+        is_active: true,
+      };
+      const res = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to create category");
+      }
+      const data = await res.json();
+      setCategories((prev) => [...prev, data.category]);
+      handleChange("category_id", data.category.id);
+      toast.success("Category created");
+      setNewCategory({ name: "", slug: "", description: "", image_url: "" });
+      setCategoryDialogOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Could not create category");
+    } finally {
+      setCreatingCategory(false);
+    }
+  }
+
+  useEffect(() => {
+    if (cropQueue.length > 0 && !currentCropFile) {
+      const nextFile = cropQueue[0];
+      setCropQueue((prev) => prev.slice(1));
+
+      if (nextFile.type.startsWith("image/")) {
+        setCurrentCropFile(nextFile);
+        const reader = new FileReader();
+        reader.addEventListener("load", () => {
+          setCropImgSrc(reader.result?.toString() || "");
+        });
+        reader.readAsDataURL(nextFile);
+      } else {
+        uploadSingleFile(nextFile);
+      }
+    }
+  }, [cropQueue, currentCropFile]);
+
+  async function uploadSingleFile(file: File) {
+    setUploadingMedia(true);
+    try {
+      const uploadData = new FormData();
+      uploadData.append("file", file);
+
+      const res = await fetch("/api/upload/products", {
+        method: "POST",
+        body: uploadData,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Upload failed");
+      }
+
+      const data = await res.json();
+      
+      const newMedia: MediaFile = {
+        id: Math.random().toString(36).substr(2, 9),
+        url: data.url,
+        type: data.type === "video" ? "video" : "image",
+      };
+
+      setMediaFiles((prev) => [...prev, newMedia]);
+
+      if (data.type === "image" && !formData.featured_image) {
+        handleChange("featured_image", data.url);
+      }
+      toast.success(`${file.name} uploaded successfully`);
+    } catch (err: any) {
+      toast.error(err.message || `Failed to upload ${file.name}`);
+    } finally {
+      setUploadingMedia(false);
+    }
+  }
+
+  function startCroppingExisting(media: MediaFile) {
+    setEditingMediaId(media.id);
+    setCropImgSrc(media.url);
+    const name = media.url.substring(media.url.lastIndexOf("/") + 1) || "image.jpg";
+    setCurrentCropFile(new File([], name, { type: "image/jpeg" }));
+  }
+
+  async function handleApplyCrop() {
+    if (!imgRef.current || !crop || !currentCropFile) return;
+
+    try {
+      const croppedBlob = await getCroppedImg(imgRef.current, crop);
+      const croppedFile = new File([croppedBlob], currentCropFile.name, {
+        type: "image/jpeg",
+      });
+
+      setUploadingMedia(true);
+      const uploadData = new FormData();
+      uploadData.append("file", croppedFile);
+
+      const res = await fetch("/api/upload/products", {
+        method: "POST",
+        body: uploadData,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Upload failed");
+      }
+
+      const data = await res.json();
+
+      if (editingMediaId) {
+        setMediaFiles((prev) =>
+          prev.map((m) =>
+            m.id === editingMediaId ? { ...m, url: data.url } : m
+          )
+        );
+        const oldMedia = mediaFiles.find((m) => m.id === editingMediaId);
+        if (oldMedia && formData.featured_image === oldMedia.url) {
+          handleChange("featured_image", data.url);
+        }
+        toast.success("Image cropped and updated successfully");
+      } else {
+        const newMedia: MediaFile = {
+          id: Math.random().toString(36).substr(2, 9),
+          url: data.url,
+          type: "image",
+        };
+        setMediaFiles((prev) => [...prev, newMedia]);
+        if (!formData.featured_image) {
+          handleChange("featured_image", data.url);
+        }
+        toast.success("Cropped image uploaded successfully");
+      }
+    } catch (e: any) {
+      toast.error("Failed to crop image: " + e.message);
+    } finally {
+      setCurrentCropFile(null);
+      setCropImgSrc("");
+      setCrop(undefined);
+      setEditingMediaId(null);
+    }
+  }
+
+  function handleCancelOrSkip() {
+    if (!editingMediaId && currentCropFile && currentCropFile.size > 0) {
+      uploadSingleFile(currentCropFile);
+    }
+    setCurrentCropFile(null);
+    setCropImgSrc("");
+    setCrop(undefined);
+    setEditingMediaId(null);
+  }
+
+  async function handleMediaUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const list: File[] = [];
+    for (let i = 0; i < files.length; i++) {
+      list.push(files[i]);
+    }
+    setCropQueue((prev) => [...prev, ...list]);
+    e.target.value = "";
+  }
+
+  function removeMedia(id: string) {
+    setMediaFiles((prev) => prev.filter((m) => m.id !== id));
+  }
+
+  // E-book PDFs upload straight to R2 via a presigned URL — never through
+  // this Next.js API route's body, which Vercel caps at ~4.5MB and would
+  // reject most real ebook files long before they got anywhere.
+  async function handleEbookUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    if (file.type !== "application/pdf") {
+      toast.error("Please select a PDF file");
+      return;
+    }
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("File size must be less than 100MB");
+      return;
+    }
+
+    setUploadingEbook(true);
+    const toastId = "ebook-upload";
+    try {
+      toast.loading("Uploading PDF...", { id: toastId });
+
+      const presignRes = await fetch("/api/upload/ebook/presign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName: file.name, fileType: file.type, fileSize: file.size }),
+      });
+      if (!presignRes.ok) {
+        const err = await presignRes.json().catch(() => ({ error: "Upload failed" }));
+        throw new Error(err.error || "Upload failed");
+      }
+      const { uploadUrl, url } = await presignRes.json();
+
+      const putRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!putRes.ok) throw new Error("Upload failed");
+
+      handleChange("ebook_file_url", url);
+      // A newly uploaded file replaces any external link — only one source
+      // of truth for the download at a time.
+      handleChange("ebook_link", "");
+      toast.success("PDF uploaded to R2!", { id: toastId });
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed", { id: toastId });
+    } finally {
+      setUploadingEbook(false);
+    }
+  }
+
+  function setAsFeatured(url: string) {
+    handleChange("featured_image", url);
+    toast.success("Set as featured image");
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!formData.name || !formData.price) {
+      toast.error("Please fill in required fields");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const productData = {
+        name: formData.name,
+        slug: formData.slug || generateSlug(formData.name),
+        description: formData.description,
+        short_description: formData.short_description,
+        price: parseFloat(formData.price),
+        sale_price: formData.sale_price ? parseFloat(formData.sale_price) : undefined,
+        cost_price: formData.cost_price ? parseFloat(formData.cost_price) : undefined,
+        sku: formData.sku,
+        stock_quantity: parseInt(formData.stock_quantity) || 0,
+        stock_status: formData.stock_status,
+        manage_stock: formData.manage_stock,
+        category_id: formData.category_id || undefined,
+        images: mediaFiles.map((m) => m.url),
+        featured_image: formData.featured_image,
+        is_featured: formData.is_featured,
+        is_active: formData.is_active,
+        weight: formData.weight ? parseFloat(formData.weight) : undefined,
+        dimensions: {
+          length: formData.dimensions.length ? parseFloat(formData.dimensions.length) : undefined,
+          width: formData.dimensions.width ? parseFloat(formData.dimensions.width) : undefined,
+          height: formData.dimensions.height ? parseFloat(formData.dimensions.height) : undefined,
+        },
+        tags: formData.tags ? formData.tags.split(",").map((t) => t.trim()) : [],
+        highlights: formData.highlights
+          ? formData.highlights.split("\n").map((h) => h.trim()).filter(Boolean)
+          : [],
+        additional_info: formData.additional_info,
+        care_instructions: formData.care_instructions || undefined,
+        meta_title: formData.meta_title,
+        meta_description: formData.meta_description,
+        homepage_section:
+          formData.homepage_section === "none" ? null : formData.homepage_section,
+        is_ebook: formData.is_ebook,
+        ebook_file_url: formData.is_ebook ? formData.ebook_file_url || undefined : undefined,
+        ebook_link: formData.is_ebook ? formData.ebook_link || undefined : undefined,
+      };
+
+      const targetUrl = isEditing ? `/api/products/${editingProductId}` : "/api/products";
+      const method = isEditing ? "PATCH" : "POST";
+
+      const res = await fetch(targetUrl, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(productData),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to create product");
+      }
+
+      toast.success(isEditing ? "Product updated successfully!" : "Product created successfully!");
+      router.push("/admin/ecommerce/products");
+    } catch (err: any) {
+      toast.error(err.message || (isEditing ? "Failed to update product" : "Failed to create product"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (isEditing && initializingProduct) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center text-muted-foreground">Loading product details...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="sticky top-0 z-10 bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => router.back()}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold">{isEditing ? "Edit Product" : "Create New Product"}</h1>
+                <p className="text-sm text-muted-foreground">
+                  {isEditing ? "Update product details" : "Add a new product to your store"}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => router.back()}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" form="product-form" disabled={loading}>
+                {loading
+                  ? isEditing
+                    ? "Saving..."
+                    : "Creating..."
+                  : isEditing
+                    ? "Save Changes"
+                    : "Create Product"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <form
+        id="product-form"
+        onSubmit={handleSubmit}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Basic Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="name">
+                    Product Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => {
+                      handleChange("name", e.target.value);
+                      if (!formData.slug) {
+                        handleChange("slug", generateSlug(e.target.value));
+                      }
+                    }}
+                    placeholder="e.g., Lavender Aromatherapy Candle"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="slug">URL Slug</Label>
+                  <Input
+                    id="slug"
+                    value={formData.slug}
+                    onChange={(e) => handleChange("slug", e.target.value)}
+                    placeholder="lavender-aromatherapy-candle"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Auto-generated from product name if left empty
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="short_description">Short Description</Label>
+                  <Textarea
+                    id="short_description"
+                    value={formData.short_description}
+                    onChange={(e) => handleChange("short_description", e.target.value)}
+                    placeholder="Brief product description (1-2 sentences)"
+                    rows={4}
+                    className="whitespace-pre-wrap"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Full Description</Label>
+                  <ProductDescriptionEditor
+                    content={formData.description}
+                    onChange={(val) => handleChange("description", val)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Media Gallery</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                  <input
+                    type="file"
+                    id="media-upload"
+                    multiple
+                    accept="image/*,video/*"
+                    onChange={handleMediaUpload}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="media-upload"
+                    className="cursor-pointer flex flex-col items-center"
+                  >
+                    <Upload className="h-12 w-12 text-gray-400 mb-4" />
+                    <p className="text-sm font-medium text-gray-700">
+                      Click to upload images or videos
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      PNG, JPG, GIF, MP4, WebM up to 10MB
+                    </p>
+                  </label>
+                </div>
+
+                {uploadingMedia && (
+                  <div className="text-center text-sm text-muted-foreground">
+                    Uploading media...
+                  </div>
+                )}
+
+                {mediaFiles.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {mediaFiles.map((media) => (
+                      <div
+                        key={media.id}
+                        className="relative group rounded-lg overflow-hidden border"
+                      >
+                        {media.type === "image" ? (
+                          <div className="relative aspect-square">
+                            <Image
+                              src={media.url}
+                              alt="Product media"
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="relative aspect-square bg-gray-100 flex items-center justify-center">
+                            <Video className="h-8 w-8 text-gray-400" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 z-20 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex items-center justify-center gap-2">
+                          {media.type === "image" && (
+                            <>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => setAsFeatured(media.url)}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity text-xs h-7 px-2"
+                              >
+                                Set Featured
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => startCroppingExisting(media)}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity bg-white text-slate-800 border-slate-250 hover:bg-slate-50 text-xs h-7 px-2"
+                              >
+                                Crop
+                              </Button>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Always visible delete button stacked on top */}
+                        <button
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeMedia(media.id); }}
+                          className="absolute top-2 right-2 z-30 p-1 bg-red-650 hover:bg-red-800 text-white rounded-full shadow-md hover:scale-110 transition-all duration-200 cursor-pointer"
+                          title="Remove image"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                        {formData.featured_image === media.url && (
+                          <div className="absolute top-2 left-2 bg-green-500 text-white text-[10px] px-2 py-0.5 rounded font-medium shadow-sm">
+                            Featured
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Pricing</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="price">
+                      Regular Price (₹) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      value={formData.price}
+                      onChange={(e) => handleChange("price", e.target.value)}
+                      placeholder="299.00"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="sale_price">Sale Price (₹)</Label>
+                    <Input
+                      id="sale_price"
+                      type="number"
+                      step="0.01"
+                      value={formData.sale_price}
+                      onChange={(e) => handleChange("sale_price", e.target.value)}
+                      placeholder="249.00"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="cost_price">Cost Price (₹)</Label>
+                    <Input
+                      id="cost_price"
+                      type="number"
+                      step="0.01"
+                      value={formData.cost_price}
+                      onChange={(e) => handleChange("cost_price", e.target.value)}
+                      placeholder="150.00"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Inventory</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="sku">SKU</Label>
+                    <Input
+                      id="sku"
+                      value={formData.sku}
+                      onChange={(e) => handleChange("sku", e.target.value)}
+                      placeholder="PROD-001"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="stock_quantity">Stock Quantity</Label>
+                    <Input
+                      id="stock_quantity"
+                      type="number"
+                      value={formData.stock_quantity}
+                      onChange={(e) => handleChange("stock_quantity", e.target.value)}
+                      placeholder="100"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="stock_status">Stock Status</Label>
+                  <Select
+                    value={formData.stock_status}
+                    onValueChange={(v) => handleChange("stock_status", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="in_stock">In Stock</SelectItem>
+                      <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                      <SelectItem value="on_backorder">On Backorder</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="manage_stock"
+                    checked={formData.manage_stock}
+                    onChange={(e) => handleChange("manage_stock", e.target.checked)}
+                    className="rounded"
+                  />
+                  <Label htmlFor="manage_stock" className="cursor-pointer">
+                    Enable stock management
+                  </Label>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Shipping</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <Label htmlFor="weight">Weight (kg)</Label>
+                    <Input
+                      id="weight"
+                      type="number"
+                      step="0.01"
+                      value={formData.weight}
+                      onChange={(e) => handleChange("weight", e.target.value)}
+                      placeholder="0.5"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="length">Length (cm)</Label>
+                    <Input
+                      id="length"
+                      type="number"
+                      step="0.01"
+                      value={formData.dimensions.length}
+                      onChange={(e) => handleDimensionChange("length", e.target.value)}
+                      placeholder="10"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="width">Width (cm)</Label>
+                    <Input
+                      id="width"
+                      type="number"
+                      step="0.01"
+                      value={formData.dimensions.width}
+                      onChange={(e) => handleDimensionChange("width", e.target.value)}
+                      placeholder="10"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="height">Height (cm)</Label>
+                    <Input
+                      id="height"
+                      type="number"
+                      step="0.01"
+                      value={formData.dimensions.height}
+                      onChange={(e) => handleDimensionChange("height", e.target.value)}
+                      placeholder="15"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>SEO</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="meta_title">Meta Title</Label>
+                  <Input
+                    id="meta_title"
+                    value={formData.meta_title}
+                    onChange={(e) => handleChange("meta_title", e.target.value)}
+                    placeholder="Product name - Your Store"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="meta_description">Meta Description</Label>
+                  <Textarea
+                    id="meta_description"
+                    value={formData.meta_description}
+                    onChange={(e) => handleChange("meta_description", e.target.value)}
+                    placeholder="Brief description for search engines"
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="tags">Tags (comma-separated)</Label>
+                  <Input
+                    id="tags"
+                    value={formData.tags}
+                    onChange={(e) => handleChange("tags", e.target.value)}
+                    placeholder="aromatherapy, relaxation, lavender"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Product Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="category">Category</Label>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={formData.category_id}
+                      onValueChange={(v) => handleChange("category_id", v)}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCategoryDialogOpen(true)}
+                      title="Create category"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="homepage_section">Homepage Section</Label>
+                  <Select
+                    value={formData.homepage_section}
+                    onValueChange={(v) => handleChange("homepage_section", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="featured">Featured Products</SelectItem>
+                      <SelectItem value="new_arrivals">New Arrivals</SelectItem>
+                      <SelectItem value="best_sellers">Best Sellers</SelectItem>
+                      <SelectItem value="on_sale">On Sale</SelectItem>
+                      <SelectItem value="none">Don't Show on Homepage</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Choose where this product appears on the homepage
+                  </p>
+                </div>
+
+                <div className="space-y-3 pt-4 border-t">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="is_featured"
+                      checked={formData.is_featured}
+                      onChange={(e) => handleChange("is_featured", e.target.checked)}
+                      className="rounded"
+                    />
+                    <Label htmlFor="is_featured" className="cursor-pointer">
+                      Featured Product
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="is_active"
+                      checked={formData.is_active}
+                      onChange={(e) => handleChange("is_active", e.target.checked)}
+                      className="rounded"
+                    />
+                    <Label htmlFor="is_active" className="cursor-pointer">
+                      Active (Visible on store)
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="is_ebook"
+                      checked={formData.is_ebook}
+                      onChange={(e) => handleChange("is_ebook", e.target.checked)}
+                      className="rounded"
+                    />
+                    <Label htmlFor="is_ebook" className="cursor-pointer flex items-center gap-1.5">
+                      <BookOpen className="h-3.5 w-3.5" /> This is an E-Book
+                    </Label>
+                  </div>
+
+                  {formData.is_ebook && (
+                    <div className="space-y-3 pl-6 border-l-2 border-slate-100 ml-1">
+                      <div>
+                        <Label className="text-xs">PDF File</Label>
+                        <input
+                          ref={ebookFileInputRef}
+                          type="file"
+                          accept="application/pdf"
+                          onChange={handleEbookUpload}
+                          className="hidden"
+                        />
+                        {formData.ebook_file_url ? (
+                          <div className="flex items-center gap-2 mt-1 p-2 rounded-lg border bg-slate-50">
+                            <FileText className="h-4 w-4 text-red-500 flex-shrink-0" />
+                            <a
+                              href={formData.ebook_file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 underline truncate flex-1"
+                            >
+                              {decodeURIComponent(formData.ebook_file_url.split("/").pop() || "uploaded-file.pdf")}
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => handleChange("ebook_file_url", "")}
+                              className="h-6 w-6 flex-shrink-0 flex items-center justify-center rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50"
+                              title="Remove file"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-1 w-full"
+                            onClick={() => ebookFileInputRef.current?.click()}
+                            disabled={uploadingEbook || !!formData.ebook_link}
+                          >
+                            {uploadingEbook ? (
+                              <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Uploading to R2...</>
+                            ) : (
+                              <><Upload className="h-3.5 w-3.5 mr-1.5" /> Upload PDF (max 100MB)</>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground uppercase tracking-wider">
+                        <div className="flex-1 h-px bg-slate-200" /> or <div className="flex-1 h-px bg-slate-200" />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="ebook_link" className="text-xs">External Download Link</Label>
+                        <Input
+                          id="ebook_link"
+                          value={formData.ebook_link}
+                          onChange={(e) => handleChange("ebook_link", e.target.value)}
+                          placeholder="https://..."
+                          disabled={!!formData.ebook_file_url}
+                        />
+                      </div>
+
+                      {!formData.ebook_file_url && !formData.ebook_link ? (
+                        <p className="text-[11px] text-amber-600">
+                          Upload a PDF or add a link — buyers won&apos;t receive a working download until one is set.
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground">
+                          Sent by email as a download link automatically once an order for this product is paid.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Featured Image</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {formData.featured_image ? (
+                  <div className="relative aspect-square rounded-lg overflow-hidden border">
+                    <Image
+                      src={formData.featured_image}
+                      alt="Featured"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="aspect-square rounded-lg border-2 border-dashed flex items-center justify-center text-muted-foreground">
+                    <div className="text-center">
+                      <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No featured image</p>
+                      <p className="text-xs">Upload media above</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </form>
+
+      <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Category</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateCategory} className="space-y-4">
+            <div>
+              <Label htmlFor="cat-name">Name</Label>
+              <Input
+                id="cat-name"
+                value={newCategory.name}
+                onChange={(e) => handleNewCategoryChange("name", e.target.value)}
+                placeholder="e.g., Ritual Candles"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="cat-slug">Slug</Label>
+              <Input
+                id="cat-slug"
+                value={newCategory.slug}
+                onChange={(e) => handleNewCategoryChange("slug", e.target.value)}
+                placeholder="ritual-candles"
+              />
+            </div>
+            <div>
+              <Label htmlFor="cat-description">Description</Label>
+              <Textarea
+                id="cat-description"
+                value={newCategory.description}
+                onChange={(e) => handleNewCategoryChange("description", e.target.value)}
+                rows={2}
+              />
+            </div>
+            <div>
+              <Label htmlFor="cat-image">Image URL</Label>
+              <Input
+                id="cat-image"
+                value={newCategory.image_url}
+                onChange={(e) => handleNewCategoryChange("image_url", e.target.value)}
+                placeholder="https://..."
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCategoryDialogOpen(false)}
+                disabled={creatingCategory}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={creatingCategory}>
+                {creatingCategory ? "Saving..." : "Add Category"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cropper Dialog */}
+      <Dialog open={Boolean(cropImgSrc)} onOpenChange={(open) => { if (!open) handleCancelOrSkip(); }}>
+        <DialogContent className="max-w-2xl bg-white p-6 rounded-2xl shadow-xl border border-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-slate-800 text-lg font-bold">Crop &amp; Sizing Editor</DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex flex-col items-center gap-4">
+            {/* Aspect Ratio selectors */}
+            <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+              {[
+                { label: "Free", value: undefined },
+                { label: "1:1 Square", value: 1 },
+                { label: "3:4 Portrait", value: 3/4 },
+                { label: "4:3 Landscape", value: 4/3 },
+                { label: "16:9 Banner", value: 16/9 },
+              ].map((opt, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    setAspect(opt.value);
+                    if (opt.value && crop) {
+                      setCrop({ ...crop, width: 100, height: 100 / opt.value });
+                    }
+                  }}
+                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                    aspect === opt.value ? "bg-white shadow-sm text-emerald-600" : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Cropping Canvas Frame */}
+            <div className="relative max-h-[380px] overflow-auto bg-slate-50 border border-slate-200 rounded-xl p-2 flex justify-center items-center w-full">
+              <ReactCrop
+                crop={crop}
+                onChange={(c) => setCrop(c)}
+                aspect={aspect}
+                className="max-w-full"
+              >
+                <img
+                  ref={imgRef}
+                  src={cropImgSrc}
+                  alt="Crop preview"
+                  onLoad={(e) => {
+                    const { width, height } = e.currentTarget;
+                    const cropWidth = Math.min(width, height) * 0.8;
+                    setCrop({
+                      unit: "px",
+                      x: (width - cropWidth) / 2,
+                      y: (height - (aspect ? cropWidth / aspect : cropWidth)) / 2,
+                      width: cropWidth,
+                      height: aspect ? cropWidth / aspect : cropWidth,
+                    });
+                  }}
+                  className="max-h-[350px] object-contain"
+                />
+              </ReactCrop>
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-2 justify-end pt-4 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancelOrSkip}
+              className="text-xs font-semibold text-slate-500 border-slate-200"
+            >
+              {editingMediaId ? "Cancel" : "Skip Cropping"}
+            </Button>
+            <Button
+              type="button"
+              onClick={handleApplyCrop}
+              className="text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              Apply Crop &amp; Upload
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function getCroppedImg(image: HTMLImageElement, crop: any): Promise<Blob> {
+  const canvas = document.createElement("canvas");
+  const scaleX = image.naturalWidth / image.width;
+  const scaleY = image.naturalHeight / image.height;
+  canvas.width = crop.width;
+  canvas.height = crop.height;
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) {
+    return Promise.reject(new Error("No 2d context"));
+  }
+
+  ctx.drawImage(
+    image,
+    crop.x * scaleX,
+    crop.y * scaleY,
+    crop.width * scaleX,
+    crop.height * scaleY,
+    0,
+    0,
+    crop.width,
+    crop.height
+  );
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("Canvas is empty"));
+          return;
+        }
+        resolve(blob);
+      },
+      "image/jpeg",
+      0.95
+    );
+  });
+}
