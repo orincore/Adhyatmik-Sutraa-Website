@@ -490,19 +490,19 @@ function HeroSection() {
 
 function BrandingSection() {
   return (
-    <section className="relative py-8 overflow-hidden bg-gradient-to-br from-slate-900 via-emerald-900 to-teal-900">
+    <section className="relative py-8 overflow-hidden bg-gradient-to-br from-[#1a0220] via-[#35093C] to-[#240429]">
       <div className="absolute inset-0">
         <Image
-          src="https://images.unsplash.com/photo-1448375240586-882707db888b?w=1600&h=800&fit=crop"
-          alt="Forest"
+          src="/assets/branding-bg.jpg"
+          alt="Night sky"
           fill
           className="object-cover opacity-90"
           sizes="100vw"
           priority
           placeholder="blur"
-          blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYwMCIgaGVpZ2h0PSI4MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iIzA2NGUzYiIvPjwvc3ZnPg=="
+          blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYwMCIgaGVpZ2h0PSI4MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iIzI0MDQyOSIvPjwvc3ZnPg=="
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/80 via-teal-900/70 to-blue-900/80" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#240429]/85 via-[#35093C]/65 to-[#4c0521]/80" />
       </div>
 
       <div className="relative z-10 container text-center">
