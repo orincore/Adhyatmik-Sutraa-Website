@@ -324,24 +324,8 @@ export default function ContactPage() {
 
                 <div className="h-px" style={{ background: "rgba(35,45,95,0.1)" }} />
 
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Clock className="h-4 w-4" style={{ color: "#FD4380" }} />
-                    <p className="text-[10px] uppercase tracking-[0.2em] font-semibold" style={{ color: "#35093C" }}>Business Hours</p>
-                  </div>
-                  <div className="space-y-1">
-                    {siteConfig.contact.businessHours.map(({ day, hours }) => (
-                      <div key={day} className="flex items-center justify-between py-2.5 border-b" style={{ borderColor: "rgba(35,45,95,0.07)" }}>
-                        <span className="text-sm" style={{ color: "rgba(35,45,95,0.65)" }}>{day}</span>
-                        <span className="text-sm font-semibold" style={{ color: hours === "Closed" ? "#ef4444" : "#35093C" }}>
-                          {hours}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+               
 
-                <div className="h-px" style={{ background: "rgba(35,45,95,0.1)" }} />
 
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.2em] font-semibold mb-4" style={{ color: "#35093C" }}>
