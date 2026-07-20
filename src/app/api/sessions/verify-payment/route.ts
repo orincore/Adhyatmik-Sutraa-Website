@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
       });
 
       // Send notification to admin
-      const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_USER;
+      const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_FROM;
       if (adminEmail) {
         await sendEmail({
           to: adminEmail,

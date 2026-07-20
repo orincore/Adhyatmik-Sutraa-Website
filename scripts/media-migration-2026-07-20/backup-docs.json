@@ -1,0 +1,1123 @@
+{
+  "products": [
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e80",
+      "slug": "7-chakra",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.437Z",
+      "description": "7 chakra premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/7-chakra.webp",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/7-chakra.webp"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "7 chakra",
+      "price": 666,
+      "short_description": "7 chakra premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:19.459Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e81",
+      "slug": "african-tourquise",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.451Z",
+      "description": "African tourquise premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/African-tourquise.jpeg",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/African-tourquise.jpeg"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "African tourquise",
+      "price": 1200,
+      "short_description": "African tourquise premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:19.477Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e82",
+      "slug": "amethyst",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.470Z",
+      "description": "Amethyst premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Amethyst.jpg",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Amethyst.jpg"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "Amethyst",
+      "price": 666,
+      "short_description": "Amethyst premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:19.494Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e84",
+      "slug": "black-obsidian",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.501Z",
+      "description": "Black obsidian premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Black-obsidian.jpg",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Black-obsidian.jpg"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "Black obsidian",
+      "price": 666,
+      "short_description": "Black obsidian premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:19.524Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e86",
+      "slug": "carnelian",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.527Z",
+      "description": "Carnelian premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Carnelian.webp",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Carnelian.webp"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "Carnelian",
+      "price": 888,
+      "short_description": "Carnelian premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:19.652Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e88",
+      "slug": "clear-quartz",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.562Z",
+      "description": "Clear quartz premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Clear-quartz.jpg",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Clear-quartz.jpg"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "Clear quartz",
+      "price": 888,
+      "short_description": "Clear quartz premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:19.690Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e8a",
+      "slug": "green-jade",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.598Z",
+      "description": "Green Jade premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Green-Jade.jpeg",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Green-Jade.jpeg"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "Green Jade",
+      "price": 888,
+      "short_description": "Green Jade premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:19.726Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e8c",
+      "slug": "job-success-candle",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7e",
+      "created_at": "2026-07-19T09:38:45.624Z",
+      "description": "Job success candle premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Job-success-candle.jpg",
+      "homepage_section": "featured",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Job-success-candle.jpg"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": true,
+      "manage_stock": true,
+      "name": "Job success candle",
+      "price": 888,
+      "short_description": "Job success candle premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Healing Candles"
+      ],
+      "updated_at": "2026-07-19T09:45:19.905Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e8d",
+      "slug": "kamakhya-devi-sindoor",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7f",
+      "created_at": "2026-07-19T09:38:45.639Z",
+      "description": "Kamakhya Devi Sindoor premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Kamakhya-Devi-Sindoor.jpg",
+      "homepage_section": "featured",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Kamakhya-Devi-Sindoor.jpg"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": true,
+      "manage_stock": true,
+      "name": "Kamakhya Devi Sindoor",
+      "price": 3999,
+      "short_description": "Kamakhya Devi Sindoor premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Siddh Tilak"
+      ],
+      "updated_at": "2026-07-19T09:45:19.927Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e8e",
+      "slug": "lapis",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.683Z",
+      "description": "Lapis premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Lapis.jpeg",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Lapis.jpeg"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "Lapis",
+      "price": 750,
+      "short_description": "Lapis premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:19.941Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e8f",
+      "slug": "malachite",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.702Z",
+      "description": "Malachite premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Malachite.jpg",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Malachite.jpg"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "Malachite",
+      "price": 1200,
+      "short_description": "Malachite premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:19.954Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e90",
+      "slug": "money-candle",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7e",
+      "created_at": "2026-07-19T09:38:45.716Z",
+      "description": "Money candle premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Money-candle.jpg",
+      "homepage_section": "featured",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Money-candle.jpg"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": true,
+      "manage_stock": true,
+      "name": "Money candle",
+      "price": 600,
+      "short_description": "Money candle premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Healing Candles"
+      ],
+      "updated_at": "2026-07-19T09:45:19.967Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e91",
+      "slug": "moonstone",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.730Z",
+      "description": "Moonstone premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Moonstone.webp",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Moonstone.webp"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "Moonstone",
+      "price": 850,
+      "short_description": "Moonstone premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:19.980Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e92",
+      "slug": "negativity-nazar-healing-candle",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7e",
+      "created_at": "2026-07-19T09:38:45.744Z",
+      "description": "Negativity & Nazar healing candle premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Negativity-Nazar-healing-candle.jpg",
+      "homepage_section": "featured",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Negativity-Nazar-healing-candle.jpg"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": true,
+      "manage_stock": true,
+      "name": "Negativity & Nazar healing candle",
+      "price": 1515,
+      "short_description": "Negativity & Nazar healing candle premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Healing Candles"
+      ],
+      "updated_at": "2026-07-19T09:45:19.995Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e93",
+      "slug": "prosperity-bracelet",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.759Z",
+      "description": "Prosperity Bracelet premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Prosperity-Bracelet-1024x683.webp",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Prosperity-Bracelet-1024x683.webp"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "Prosperity Bracelet",
+      "price": 777,
+      "short_description": "Prosperity Bracelet premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:20.032Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e94",
+      "slug": "pyrite",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.777Z",
+      "description": "Pyrite premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Pyrite.jpg",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Pyrite.jpg"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "Pyrite",
+      "price": 750,
+      "short_description": "Pyrite premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:20.048Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e95",
+      "slug": "res-jasper",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.794Z",
+      "description": "Res jasper premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Res-jasper.jpg",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Res-jasper.jpg"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "Res jasper",
+      "price": 750,
+      "short_description": "Res jasper premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:20.201Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e96",
+      "slug": "rose-quartz-2",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.807Z",
+      "description": "Rose quartz premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Rose-quartz.jpeg",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Rose-quartz.jpeg"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "Rose quartz",
+      "price": 666,
+      "short_description": "Rose quartz premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:20.243Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e97",
+      "slug": "sindoor-kamya-sindoor",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7f",
+      "created_at": "2026-07-19T09:38:45.819Z",
+      "description": "Sindoor - Kamya Sindoor premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Sindoor-–-Kamya-Sindoor.png",
+      "homepage_section": "featured",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Sindoor-–-Kamya-Sindoor.png"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": true,
+      "manage_stock": true,
+      "name": "Sindoor",
+      "price": 3999,
+      "short_description": "Sindoor - Kamya Sindoor premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Siddh Tilak"
+      ],
+      "updated_at": "2026-07-19T09:45:20.399Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e98",
+      "slug": "smoky-quartz",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.830Z",
+      "description": "Smoky Quartz premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Smoky-Quartz.jpeg",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Smoky-Quartz.jpeg"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "Smoky Quartz",
+      "price": 1200,
+      "short_description": "Smoky Quartz premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:20.416Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e99",
+      "slug": "sodalite",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.843Z",
+      "description": "Sodalite premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/sodalite-.webp",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/sodalite-.webp"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "Sodalite",
+      "price": 750,
+      "short_description": "Sodalite premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:20.568Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e9a",
+      "slug": "success-candle",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7e",
+      "created_at": "2026-07-19T09:38:45.859Z",
+      "description": "Success candle premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Success-candle.jpg",
+      "homepage_section": "featured",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Success-candle.jpg"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": true,
+      "manage_stock": true,
+      "name": "Success candle",
+      "price": 999,
+      "short_description": "Success candle premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Healing Candles"
+      ],
+      "updated_at": "2026-07-19T09:45:20.716Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e9b",
+      "slug": "sulemani-hakik-bracelet",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.880Z",
+      "description": "Sulemani hakik bracelet premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Sulemani-hakik-bracelet.webp",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Sulemani-hakik-bracelet.webp"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "Sulemani hakik bracelet",
+      "price": 999,
+      "short_description": "Sulemani hakik bracelet premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:20.731Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e9c",
+      "slug": "tibetan-tourquise",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.905Z",
+      "description": "Tibetan tourquise premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Tibetan-tourquise.jpg",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Tibetan-tourquise.jpg"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": false,
+      "manage_stock": true,
+      "name": "Tibetan tourquise",
+      "price": 1450,
+      "short_description": "Tibetan tourquise premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:20.746Z"
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e9e",
+      "slug": "triple-protection-crystal",
+      "__v": 0,
+      "category_id": "6a5c9b25b0cc73a4a09c8e7d",
+      "created_at": "2026-07-19T09:38:45.931Z",
+      "description": "Triple Protection Crystal premium quality item.",
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Triple-Protection-Crystal.png",
+      "homepage_section": "featured",
+      "images": [
+        "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/Triple-Protection-Crystal.png"
+      ],
+      "is_active": true,
+      "is_ebook": false,
+      "is_featured": true,
+      "manage_stock": true,
+      "name": "Triple Protection Crystal",
+      "price": 777,
+      "short_description": "Triple Protection Crystal premium quality item.",
+      "stock_quantity": 25,
+      "stock_status": "in_stock",
+      "tags": [
+        "Gemstones and Crystal"
+      ],
+      "updated_at": "2026-07-19T09:45:20.774Z"
+    }
+  ],
+  "courses": [
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8e9f",
+      "slug": "angel-healing",
+      "__v": 0,
+      "bonuses": [
+        "Bonus angel rituals",
+        "Community support"
+      ],
+      "category": "Angel Healing",
+      "created_at": "2026-07-19T09:38:45.943Z",
+      "curriculum": [
+        {
+          "title": "Angel Foundations",
+          "description": "What angels are, their history, angels in Hinduism, angelic communication, and how to connect with them.",
+          "topics": [
+            "Learn about three saints",
+            "The angelic kingdom",
+            "15 Major Archangels — Michael, Gabriel, Ariel, Raziel, and more",
+            "Colors and energy of angels"
+          ]
+        },
+        {
+          "title": "Angelic Practice",
+          "description": "Prayers, affirmations, cord cutting, shielding, protection, and reading work.",
+          "topics": [
+            "Angel numbers, sun signs and angels",
+            "Crystals and angels",
+            "Angel card reading and healing attunement",
+            "Angel cleansing, prayers, exercises, and meditation"
+          ]
+        },
+        {
+          "title": "Professional Angel Healing",
+          "description": "Discover your natural divine communication style and learn to give accurate angel healing using oracle cards.",
+          "topics": [
+            "Sharing messages and angel advice with clients",
+            "Confidentiality and ethics",
+            "Building your spiritual business",
+            "Major mistakes practitioners make"
+          ]
+        }
+      ],
+      "description": "Feel the transformation in your physical and spiritual self with the enlightening angel healing course by Sonali Bhattacharya. Learn to connect with divine energies to heal, guide, and uplift your clients — with teachings guided and blessed by healing archangels Michael, Raphael, Uriel, Gabriel, Jophiel, Chamuel, Azrael, Ariel, Raziel, and many more. Includes recordings, certificates, and notes.",
+      "display_order": 1,
+      "duration": "Online sessions + recordings",
+      "featured": true,
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/main-banner-2.jpg",
+      "highlights": [
+        "Release stress, attract positivity, and feel empowered",
+        "Multi-Dimensional Healing with light language activations, toning, sound, reiki, and intuitive healing",
+        "Integrated Energy Therapy — clear and rebalance the body's cellular memory of energy blockages",
+        "Spiritual guidance and mentoring for awakening",
+        "Group sound and light healing with chimes, crystal singing bowls, and tones"
+      ],
+      "instructor": {
+        "name": "Sonali Bhattacharya",
+        "title": "Tarot Reader, Numerologist & Angel Healer",
+        "bio": "Founder – Adhyatmik Sutraa. A holistic healer and life coach with 10+ years in the occult field, she has guided over 10,000 people through tarot, numerology, angel healing, and 50+ occult and spiritual healing courses."
+      },
+      "level": "all",
+      "price": 0,
+      "status": "published",
+      "subtitle": "Guide Your Emotional, Mental, and Physical Well-Being",
+      "title": "Angel Healing",
+      "updated_at": "2026-07-19T09:45:20.788Z",
+      "what_you_receive": [
+        "Session recordings",
+        "Notes and study material",
+        "Certificate on completing healings and submitting your report",
+        "Bonus angel rituals — protection, money, relationship, health, career, spiritual progress"
+      ],
+      "who_is_this_for": [
+        "Anyone ready to help others heal",
+        "Seekers releasing old traumas and fears",
+        "Healers who want angelic guidance in their practice"
+      ]
+    },
+    {
+      "_id": "6a5c9b25b0cc73a4a09c8ea0",
+      "slug": "tarot-card-reading",
+      "__v": 0,
+      "bonuses": [
+        "Certification for professional practice"
+      ],
+      "category": "Tarot",
+      "created_at": "2026-07-19T09:38:45.961Z",
+      "curriculum": [
+        {
+          "title": "Beginner's Tarot Card Reading",
+          "description": "Foundations of tarot including traditional theory and the Major Arcana.",
+          "topics": [
+            "Major Arcana (22 cards)",
+            "Three and five card spreads",
+            "Basic ethics and intuition development"
+          ]
+        },
+        {
+          "title": "Intermediate Tarot Mastery",
+          "description": "Deeper symbolism of the cards and the Minor Arcana, with storytelling for complex readings.",
+          "topics": [
+            "Minor Arcana (56 cards)",
+            "Archetypes in each suit",
+            "Identifying patterns and possibilities",
+            "Professional conduct"
+          ]
+        },
+        {
+          "title": "Professional Tarot Reader Certification",
+          "description": "Advanced interpretation and the business side of building your tarot practice.",
+          "topics": [
+            "Advanced Major & Minor Arcana interpretation",
+            "Celtic symbols",
+            "Managing clients and professional relationships",
+            "Marketing your practice"
+          ]
+        }
+      ],
+      "description": "Tarot is a great tool to help one understand where they stand in life. At Adhyatmik Sutraa you can learn tarot card reading and receive certification for professional practice, with a focus on practicality, intuitiveness, and ethical learning — from beginner foundations through professional certification.",
+      "display_order": 2,
+      "duration": "Online course + recordings",
+      "featured": true,
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/a-woman-fortuneteller-tells-a-man-on-tarot-cards-2023-01-25-13-02-09-utc-1-2.jpg",
+      "highlights": [
+        "Personal growth — close the gap between your conscious and unconscious mind",
+        "Support and help others make decisions with confidence",
+        "Align your intuition with your authentic self",
+        "Practical training for real-world readings, not just theory"
+      ],
+      "instructor": {
+        "name": "Sonali Bhattacharya",
+        "title": "Tarot Reader, Numerologist & Angel Healer",
+        "bio": "Founder – Adhyatmik Sutraa. A holistic healer and life coach with 10+ years in the occult field, she has guided over 10,000 people through tarot, numerology, angel healing, and 50+ occult and spiritual healing courses."
+      },
+      "level": "all",
+      "price": 0,
+      "status": "published",
+      "subtitle": "Move Forward in Your Life With Our Detailed Tarot Card Predictions",
+      "title": "Tarot Card Reading",
+      "updated_at": "2026-07-19T09:45:21.327Z",
+      "what_you_receive": [
+        "Soft copies of courses and teachings",
+        "Notes in PDF format",
+        "Downloadable workbooks and resources",
+        "Recorded sessions",
+        "Interactive exercises and quizzes"
+      ],
+      "who_is_this_for": [
+        "Beginners drawn to tarot",
+        "Readers upgrading to professional practice",
+        "Anyone seeking self-discovery and alignment"
+      ]
+    },
+    {
+      "_id": "6a5c9b26b0cc73a4a09c8ea1",
+      "slug": "black-magic-removal",
+      "__v": 0,
+      "bonuses": [
+        "Remedies for addictions, bad dreams, stagnant energies, and spells"
+      ],
+      "category": "Occult Protection",
+      "created_at": "2026-07-19T09:38:45.975Z",
+      "curriculum": [
+        {
+          "title": "Understanding Dark Energies",
+          "description": "Introduction to different energies, black and white magic, and the meaning of the evil eye.",
+          "topics": [
+            "Evil and bad energies",
+            "Black magic details and symptoms",
+            "Evil eye protection"
+          ]
+        },
+        {
+          "title": "Cleansing & Removal",
+          "description": "Practical cleansing work and removal remedies taught step by step.",
+          "topics": [
+            "How to do cleansing",
+            "Incenses for removing black magic",
+            "Black magic removal mantra",
+            "Curse removal bath",
+            "Lemon mantra remedy"
+          ]
+        },
+        {
+          "title": "Protection & Prosperity",
+          "description": "Remedies to shield clients and their homes, and to release blockages.",
+          "topics": [
+            "Bhairav Mantra for protection",
+            "Full moon and new moon lemon remedy",
+            "Protection oil and knot magic",
+            "Home purification rituals",
+            "Mojo bag removal remedy",
+            "Tantric mantras and remedies"
+          ]
+        }
+      ],
+      "description": "At Adhyatmik Sutraa, we understand the power of black magic remedies and offer time-tested solutions to neutralize them. This certified 5-day workshop, curated by Sonali Bhattacharya from over a decade of experience, teaches you to identify, cleanse, and protect your clients against dark spiritual forces — strictly for well-being, never for harm.",
+      "display_order": 3,
+      "duration": "5-day workshop",
+      "featured": true,
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/blog-header-1-1024x683.jpg",
+      "highlights": [
+        "Identify signs and symptoms of black magic and the evil eye",
+        "Cleansing rituals, incenses, and black magic removal mantras",
+        "Curse removal bath, lemon mantra remedy, and remedy for unnecessary sickness",
+        "Protection oil, selenite remedy, and protection knot magic",
+        "Home Vaastu tips and lamp remedy to remove financial blockages"
+      ],
+      "instructor": {
+        "name": "Sonali Bhattacharya",
+        "title": "Tarot Reader, Numerologist & Angel Healer",
+        "bio": "Founder – Adhyatmik Sutraa. A holistic healer and life coach with 10+ years in the occult field, she has guided over 10,000 people through tarot, numerology, angel healing, and 50+ occult and spiritual healing courses."
+      },
+      "level": "all",
+      "price": 0,
+      "status": "published",
+      "subtitle": "Defeat the Dark Powers With Our Black Magic Course",
+      "title": "Black Magic Removal",
+      "updated_at": "2026-07-19T09:45:21.380Z",
+      "what_you_receive": [
+        "Certificate on completion",
+        "Step-by-step remedy teachings",
+        "Detailed course content on protection and healing"
+      ],
+      "who_is_this_for": [
+        "Healers who want to safeguard others",
+        "Practitioners adding protection work to their services",
+        "Anyone helping people restore happiness and peace"
+      ]
+    },
+    {
+      "_id": "6a5c9b26b0cc73a4a09c8ea2",
+      "slug": "crystal-healing",
+      "__v": 0,
+      "bonuses": [
+        "Integration with advanced spiritual courses and healing techniques"
+      ],
+      "category": "Crystal Healing",
+      "created_at": "2026-07-19T09:38:46.000Z",
+      "curriculum": [
+        {
+          "title": "Crystal Foundations",
+          "description": "The science and spirituality behind crystals, and how to choose and care for them.",
+          "topics": [
+            "Crystal selection and cleansing",
+            "Vibration and energy basics"
+          ]
+        },
+        {
+          "title": "Chakras, Grids & Layouts",
+          "description": "Align crystals with chakras for complete mind and body healing.",
+          "topics": [
+            "Chakra balancing",
+            "Healing grids and layouts",
+            "Crystal synergy and alignment"
+          ]
+        },
+        {
+          "title": "Applied Crystal Healing",
+          "description": "Bring crystal work into daily rituals and combined practices.",
+          "topics": [
+            "Combining crystals with reiki, meditation, and tarot",
+            "Crystals for abundance, love, and protection",
+            "Daily crystal ritual for aura cleansing"
+          ]
+        }
+      ],
+      "description": "Crystals carry a distinct energy and have been used for centuries to remove negative energies, align chakras, and provide emotional well-being. Learn crystal healing with Sonali Bhattacharya in this special online course carved for energy healers — from crystal selection and cleansing to healing grids, chakra balancing, and combining crystals with reiki, meditation, and tarot.",
+      "display_order": 4,
+      "duration": "Online workshop + certification",
+      "featured": true,
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/advantages-bg.jpg",
+      "highlights": [
+        "Establish emotional balance and mental clarity",
+        "Remove negativity and stress with vibrational energy",
+        "Boost spiritual growth and protection",
+        "Clear quartz for clarity, amethyst for calm, rose quartz for love, pyrite for success and money"
+      ],
+      "instructor": {
+        "name": "Sonali Bhattacharya",
+        "title": "Tarot Reader, Numerologist & Angel Healer",
+        "bio": "Founder – Adhyatmik Sutraa. A holistic healer and life coach with 10+ years in the occult field, she has guided over 10,000 people through tarot, numerology, angel healing, and 50+ occult and spiritual healing courses."
+      },
+      "level": "all",
+      "price": 0,
+      "status": "published",
+      "subtitle": "A Powerful Way towards Energy and Spiritual Healing",
+      "title": "Crystal Healing",
+      "updated_at": "2026-07-19T09:45:21.418Z",
+      "what_you_receive": [
+        "Crystal healing practitioner certification from Adhyatmik Sutraa",
+        "PDF crystal energy manual",
+        "Access to Sonali Bhattacharya's private healer community"
+      ],
+      "who_is_this_for": [
+        "Energy healers and reiki learners",
+        "Tarot readers",
+        "Beginners seeking holistic well-being — no prior experience needed"
+      ]
+    },
+    {
+      "_id": "6a5c9b26b0cc73a4a09c8ea3",
+      "slug": "salt-magic",
+      "__v": 0,
+      "bonuses": [
+        "Practical salt cleansing techniques for life"
+      ],
+      "category": "Salt Magic",
+      "created_at": "2026-07-19T09:38:46.018Z",
+      "curriculum": [
+        {
+          "title": "The Spiritual Science of Salt",
+          "description": "Why salt has been revered across traditions as a sacred, powerful tool.",
+          "topics": [
+            "How salt absorbs dense vibrations",
+            "Salt for negativity removal"
+          ]
+        },
+        {
+          "title": "Salt Rituals Step-by-Step",
+          "description": "Practical rituals for home, personal cleansing, and abundance.",
+          "topics": [
+            "Home and personal cleansing rituals",
+            "Money and prosperity techniques",
+            "Salt bowls, grids, and baths"
+          ]
+        },
+        {
+          "title": "Advanced Salt Work",
+          "description": "Specialised rituals for different intentions and advanced healing.",
+          "topics": [
+            "Himalayan salt and sea salt rituals",
+            "Salt and candle combined ritual (advanced)",
+            "Removing blockages and the evil eye"
+          ]
+        }
+      ],
+      "description": "For centuries, healers have trusted the magic of salt to absorb negativity, cleanse energy, and create a powerful protective shield. In this course you will learn the rituals step-by-step: techniques for energy cleansing, manifesting abundance, and protection — an initiation into a sacred practice passed through generations.",
+      "display_order": 5,
+      "duration": "Online course + certification",
+      "featured": true,
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/team-5.jpg",
+      "highlights": [
+        "Clear negativity and emotional heaviness",
+        "Protect against dark energies and the evil eye",
+        "Manifest success, money, and prosperity",
+        "Balance home and business vibrations"
+      ],
+      "instructor": {
+        "name": "Sonali Bhattacharya",
+        "title": "Tarot Reader, Numerologist & Angel Healer",
+        "bio": "Founder – Adhyatmik Sutraa. A holistic healer and life coach with 10+ years in the occult field, she has guided over 10,000 people through tarot, numerology, angel healing, and 50+ occult and spiritual healing courses."
+      },
+      "level": "all",
+      "price": 0,
+      "status": "published",
+      "subtitle": "Transform Your Energy Naturally Using This Course",
+      "title": "Salt Magic",
+      "updated_at": "2026-07-19T09:45:21.432Z",
+      "what_you_receive": [
+        "Salt magic certification by Sonali Bhattacharya",
+        "Step-by-step guidance",
+        "Membership of a growing community of spiritual learners"
+      ],
+      "who_is_this_for": [
+        "Healers, tarot readers, and reiki healers",
+        "Energy workers and spiritual seekers",
+        "Anyone with an open mind and a curious heart — no prior experience required"
+      ]
+    },
+    {
+      "_id": "6a5c9b26b0cc73a4a09c8ea4",
+      "slug": "personal-consultation-healing",
+      "__v": 0,
+      "bonuses": [],
+      "category": "Consultation",
+      "created_at": "2026-07-19T09:38:46.034Z",
+      "curriculum": [
+        {
+          "title": "Your Consultation Session",
+          "description": "A confidential 1-on-1 session, scheduled at your availability, with customized and personalized guidance.",
+          "topics": [
+            "Complete confidentiality of your sessions",
+            "Slots provided per your availability",
+            "Personalized therapies and healing consultation"
+          ]
+        }
+      ],
+      "description": "At Adhyatmik Sutraa, Sonali guides inspired individuals to connect with their inner self. The personal consultation and healing process removes hurdles, heals past traumas, and helps you fulfil your life's purpose — with complete confidentiality and customized healing tips and manifestation processes. 1-on-1 consultation @ ₹999 for 30 minutes.",
+      "display_order": 6,
+      "duration": "30-minute 1-on-1 session",
+      "featured": true,
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/testimonial-header-1024x683.jpg",
+      "highlights": [
+        "Self-awareness — a deeper understanding of your emotions and thoughts",
+        "Healing from past traumas to facilitate personal growth",
+        "Managing stress, anxiety, and depression",
+        "Holistic connection of mind, body, and emotions",
+        "Emotional release and reduced emotional baggage"
+      ],
+      "instructor": {
+        "name": "Sonali Bhattacharya",
+        "title": "Tarot Reader, Numerologist & Angel Healer",
+        "bio": "Founder – Adhyatmik Sutraa. A holistic healer and life coach with 10+ years in the occult field, she has guided over 10,000 people through tarot, numerology, angel healing, and 50+ occult and spiritual healing courses."
+      },
+      "level": "all",
+      "price": 999,
+      "status": "published",
+      "subtitle": "Healing for Your Body, Mind, and Soul",
+      "title": "Personal Consultation & Healing",
+      "updated_at": "2026-07-19T09:45:21.450Z",
+      "what_you_receive": [
+        "Customized healing tips and manifestation processes",
+        "Confidential session with a trained, certified team",
+        "Personalized responses to guide your best life"
+      ],
+      "who_is_this_for": [
+        "Anyone seeking closure or direction",
+        "People burdened with suffering, stress, or past traumas",
+        "Seekers who want a satisfying, purpose-driven life"
+      ]
+    }
+  ],
+  "blogs": [
+    {
+      "_id": "6a5c9b26b0cc73a4a09c8ea5",
+      "slug": "crystal-healing-balancing-your-aura-and-emotions",
+      "__v": 0,
+      "author": "Sonali Bhattacharya",
+      "category": "Blog",
+      "content": "<p>Crystals have been part of spiritual practices for thousands of years. Ancient civilizations believed crystals held powerful vibrations that could heal, protect, and bring good fortune. Today, crystal healing has gained immense popularity because of its ability to restore emotional balance and spiritual alignment.</p>\n<p>Each crystal carries unique energy. For example, Amethyst is known for calming the mind and helping with stress relief. Rose Quartz enhances love, compassion, and self-acceptance. Black Tourmaline is widely used for protection against negativity. By keeping these crystals close to you—or meditating with them—you align your aura with their natural vibrations.</p>\n<p>Crystal healing is not about instant magic. Instead, it is about creating a subtle but powerful shift in your energy field. For instance, if someone struggles with anxiety, holding a calming crystal can help them feel grounded. Similarly, if you face difficulties in relationships, crystals like rose quartz and green aventurine can invite harmony and trust.</p>\n<p>At Adhyatmik Sutraa, we not only provide authentic gemstones but also teach crystal healing. Our course explains how to select, cleanse, and use crystals for maximum benefits. We also guide students on combining crystal healing with other practices like reiki and meditation.</p>\n<p>One of the biggest benefits of crystal healing is its simplicity. You do not need complex rituals—just keeping the right crystal near you can make a difference. Over time, these crystals become part of your life, subtly improving your aura, thoughts, and emotions.</p>\n<p>In a world full of stress and distractions, crystal healing helps you stay centered. By learning this practice, you are not only inviting positivity into your life but also gaining the ability to help others cleanse their emotional blockages and live with clarity.</p>",
+      "created_at": "2026-07-19T09:38:46.050Z",
+      "excerpt": "Crystals have been part of spiritual practices for thousands of years. Ancient civilizations believed crystals held powerful vibrations that could heal, protect, and bring good fortune.",
+      "featured": true,
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/advantages-bg-300x200.jpg",
+      "read_time": 4,
+      "status": "published",
+      "tags": [
+        "crystal healing",
+        "aura",
+        "emotions"
+      ],
+      "title": "Crystal Healing: Balancing Your Aura and Emotions",
+      "updated_at": "2026-07-19T09:45:21.464Z"
+    },
+    {
+      "_id": "6a5c9b26b0cc73a4a09c8ea6",
+      "slug": "angel-healing-connecting-with-divine-energies",
+      "__v": 0,
+      "author": "Sonali Bhattacharya",
+      "category": "Blog",
+      "content": "<p>The world around us is full of energies—some that uplift us and some that drain us. When life feels heavy, angel healing can be the gentle guiding light that clears our path. This spiritual practice is based on the belief that angels and higher divine beings are always around us, ready to help when we seek their guidance.</p>\n<p>Angel healing works by calling upon these divine beings to assist in clearing negativity, emotional pain, and inner doubts. Through prayers, affirmations, and meditative practices, a healer channels angelic energy to bring peace and positivity. Many clients have described angel healing sessions as deeply relaxing, with a renewed sense of hope.</p>\n<p>For instance, Archangel Michael is often called upon for protection and strength. Archangel Raphael is known for healing, especially emotional and physical imbalances. Each angel carries unique vibrations, and when we tune into them, we align ourselves with universal harmony.</p>\n<p>At Adhyatmik Sutraa, we teach the Angel Healing Course where you learn to connect with these divine energies. Whether you wish to heal yourself or guide others, this practice empowers you to recognize angelic signs, remove energy blockages, and uplift the spirit.</p>\n<p>Angel healing is not bound by religion—it is purely about divine love and compassion. Anyone with an open heart can connect with angels. If practiced with faith, it can help reduce stress, overcome fear, and create a deep bond with universal energy.</p>\n<p>When you embrace angel healing, you realize that you are never alone. The angels are always with you, whispering guidance, protecting your aura, and lighting your path toward positivity.</p>",
+      "created_at": "2026-07-19T09:38:46.064Z",
+      "excerpt": "The world around us is full of energies—some that uplift us and some that drain us. When life feels heavy, angel healing can be the gentle guiding light that clears our path.",
+      "featured": true,
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/blog-header-1-300x200.jpg",
+      "read_time": 4,
+      "status": "published",
+      "tags": [
+        "angel healing",
+        "divine energies"
+      ],
+      "title": "Angel Healing – Connecting With Divine Energies",
+      "updated_at": "2026-07-19T09:45:21.479Z"
+    },
+    {
+      "_id": "6a5c9b26b0cc73a4a09c8ea7",
+      "slug": "unlocking-the-power-of-tarot-for-everyday-clarity",
+      "__v": 0,
+      "author": "Sonali Bhattacharya",
+      "category": "Blog",
+      "content": "<p>Tarot cards have fascinated people for centuries, but they are much more than mystical tools or symbols of fortune-telling. Tarot is essentially a mirror of your subconscious mind—it reflects the energies around you and guides you to understand your inner thoughts better. Many believe tarot cards are predictive, but in truth, they are a medium of self-reflection and guidance.</p>\n<p>When you sit for a tarot session, every card you pull carries energy. These cards connect with your aura and subconscious mind to reveal possibilities, hidden fears, or blocks you may not have noticed before. For example, pulling the “Fool” card often suggests new beginnings, while the “Tower” can signal sudden changes. Instead of seeing these cards as good or bad, it is better to see them as signals that help you make informed choices.</p>\n<p>Tarot also supports emotional healing. Suppose you are confused about your career or relationships—the cards can offer direction and clarity. They cannot “decide” for you, but they can empower you to think with an open heart and mind. This makes tarot especially powerful for those who feel stuck in life.</p>\n<p>At Adhyatmik Sutraa, our tarot courses are designed to help beginners and advanced learners master this art. We teach not only how to interpret the cards but also how to connect spiritually with their energy. Once you learn this practice, you can help others decode life's mysteries and guide them toward balance and positivity.</p>\n<p>In today's fast-paced life, tarot acts as a pause button. It helps you slow down, reflect, and gain confidence in your path. By learning tarot, you are not only empowering yourself but also opening a gateway to helping others live with purpose.</p>",
+      "created_at": "2026-07-19T09:38:46.107Z",
+      "excerpt": "Tarot cards have fascinated people for centuries, but they are much more than mystical tools or symbols of fortune-telling.",
+      "featured": true,
+      "featured_image": "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/contact-us-header-300x200.jpg",
+      "read_time": 4,
+      "status": "published",
+      "tags": [
+        "tarot",
+        "clarity",
+        "self-reflection"
+      ],
+      "title": "Unlocking the Power of Tarot for Everyday Clarity",
+      "updated_at": "2026-07-19T09:45:21.492Z"
+    }
+  ]
+}
