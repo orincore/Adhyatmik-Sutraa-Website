@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { EditorContent } from "@tiptap/react";
@@ -47,6 +47,115 @@ function hexToRgba(hex: string, alpha: number): string {
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// Relative luminance — decides whether text on a given surface should be
+// light or dark. Lets every page's own palette drive the design without
+// hardcoding which sections are "dark" (a green-palette page and a
+// plum-palette page both resolve correctly).
+function isDarkColor(hex: string): boolean {
+  if (!hex || hex.length < 7) return false;
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const lin = (v: number) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b) < 0.42;
+}
+
+// The "stage" backdrop: a saturated base with aura blooms layered over it, so
+// dark sections read as lit atmosphere rather than a flat block of color.
+function stageBackground(base: string, glow: string, flare: string): React.CSSProperties {
+  return {
+    backgroundColor: base,
+    backgroundImage: [
+      `radial-gradient(62% 52% at 12% 8%, ${hexToRgba(glow, 0.55)} 0%, transparent 62%)`,
+      `radial-gradient(52% 46% at 88% 16%, ${hexToRgba(flare, 0.34)} 0%, transparent 66%)`,
+      `radial-gradient(74% 60% at 50% 112%, ${hexToRgba(glow, 0.36)} 0%, transparent 62%)`,
+    ].join(", "),
+  };
+}
+
+// Signature marker: a hairline rule broken by a small diamond node. Stands in
+// for the usual "01 / 02 / 03" eyebrow — this content isn't a sequence, so a
+// ritual mark suits it better than numbering.
+function RitualRule({ color, className = "" }: { color: string; className?: string }) {
+  return (
+    <span className={`inline-flex items-center gap-2 ${className}`} aria-hidden="true">
+      <span className="h-px w-8 sm:w-12" style={{ background: `linear-gradient(90deg, transparent, ${color})` }} />
+      <span className="h-1.5 w-1.5 rotate-45" style={{ backgroundColor: color }} />
+      <span className="h-px w-8 sm:w-12" style={{ background: `linear-gradient(90deg, ${color}, transparent)` }} />
+    </span>
+  );
+}
+
+function SectionHeading({
+  title,
+  subtitle,
+  onDark,
+  accent,
+  align = "center",
+  className = "",
+}: {
+  title?: string;
+  subtitle?: string;
+  onDark?: boolean;
+  accent: string;
+  align?: "center" | "left";
+  className?: string;
+}) {
+  const centered = align === "center";
+  return (
+    <div className={`${centered ? "text-center mx-auto" : ""} max-w-3xl ${className}`}>
+      <div className={`lt-reveal mb-5 ${centered ? "flex justify-center" : ""}`}>
+        <RitualRule color={accent} />
+      </div>
+      {hasContent(title) && (
+        <h2
+          className="lt-reveal font-display font-bold leading-[1.08] tracking-[-0.02em] text-[clamp(1.9rem,4vw,3.25rem)]"
+          style={{ ["--lt-i" as string]: 1, color: onDark ? "#fff" : "#111827" }}
+        >
+          {title}
+        </h2>
+      )}
+      {hasContent(subtitle) && (
+        <p
+          className="lt-reveal font-body mt-4 text-base sm:text-lg leading-relaxed"
+          style={{ ["--lt-i" as string]: 2, color: onDark ? "rgba(255,255,255,0.74)" : "#4B5563" }}
+        >
+          {subtitle}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Arrow used on every CTA — kept as one component so the hover motion is
+// identical everywhere.
+function CtaArrow({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`ml-2 h-4 w-4 transition-transform duration-300 group-hover/cta:translate-x-1 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+    </svg>
+  );
+}
+
+// Shared CTA chrome: gradient fill derived from the page tokens, plus a sheen
+// sweep on hover. `as` keeps <a> vs <button> semantics intact.
+function ctaClass(size: "lg" | "md" = "lg") {
+  return [
+    "lt-cta lt-focus group/cta relative inline-flex items-center justify-center rounded-full font-semibold text-white",
+    "shadow-lg",
+    size === "lg" ? "px-8 sm:px-10 py-4 text-base sm:text-lg" : "px-6 py-3 text-sm sm:text-base",
+  ].join(" ");
+}
+
+function ctaStyle(glow: string, flare: string): React.CSSProperties {
+  // Accent-dominant so the button stays vivid; the deeper brand color only
+  // falls off past the far corner, which keeps it from muddying the fill.
+  return {
+    backgroundImage: `linear-gradient(135deg, ${flare} 0%, ${flare} 52%, ${glow} 125%)`,
+    boxShadow: `0 12px 32px -10px ${hexToRgba(flare, 0.75)}`,
+  };
 }
 
 const VIDEO_REGEX = /\.(mp4|webm|ogg)$/i;
@@ -100,30 +209,57 @@ function YouTubeEmbed({ videoId, autoplay, muted, className }: {
 // ---------------------------------------------------------------------------
 // FAQ Item Component (accordion)
 // ---------------------------------------------------------------------------
-function FaqItem({ item, primaryColor }: { item: { question: string; answer: string }; primaryColor: string }) {
+function FaqItem({
+  item,
+  primaryColor,
+  ink = "#111827",
+  muted = "#4B5563",
+  surface = "#FFFFFF",
+  hairline = "rgba(17,24,39,0.08)",
+}: {
+  item: { question: string; answer: string };
+  primaryColor: string;
+  ink?: string;
+  muted?: string;
+  surface?: string;
+  hairline?: string;
+}) {
   const [open, setOpen] = React.useState(false);
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+    <div
+      className="overflow-hidden rounded-2xl transition-colors duration-300"
+      style={{ backgroundColor: surface, border: `1px solid ${open ? hexToRgba(primaryColor, 0.35) : hairline}` }}
+    >
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-6 py-4 text-left gap-4"
+        aria-expanded={open}
+        className="lt-focus w-full flex items-center justify-between gap-4 px-6 py-5 text-left"
       >
-        <span className="font-semibold text-gray-900 text-sm sm:text-base font-body">{item.question}</span>
+        <span className="font-body text-sm sm:text-base font-semibold" style={{ color: ink }}>{item.question}</span>
         <span
-          className="flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center transition-transform duration-300"
-          style={{ backgroundColor: open ? primaryColor : "#f3f4f6", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full transition-all duration-300"
+          style={{
+            backgroundColor: open ? primaryColor : hexToRgba(primaryColor, 0.1),
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+          }}
         >
-          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke={open ? "#fff" : "#6b7280"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke={open ? "#fff" : primaryColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </span>
       </button>
-      {open && (
-        <div className="px-6 pb-5 text-sm text-gray-600 font-body leading-relaxed border-t border-gray-50 pt-3">
-          {item.answer}
+      {/* grid-rows trick animates to the answer's natural height without measuring it */}
+      <div
+        className="grid transition-all duration-500 ease-[cubic-bezier(.16,1,.3,1)]"
+        style={{ gridTemplateRows: open ? "1fr" : "0fr", opacity: open ? 1 : 0 }}
+      >
+        <div className="overflow-hidden">
+          <p className="font-body px-6 pb-5 text-sm leading-relaxed" style={{ color: muted }}>
+            {item.answer}
+          </p>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -131,14 +267,18 @@ function FaqItem({ item, primaryColor }: { item: { question: string; answer: str
 // ---------------------------------------------------------------------------
 // Marquee Component
 // ---------------------------------------------------------------------------
-function Marquee({ items, color }: { items: string[]; color: string }) {
+function Marquee({ items, color, accent }: { items: string[]; color: string; accent?: string }) {
   const doubled = [...items, ...items, ...items];
   return (
-    <div className="overflow-hidden whitespace-nowrap py-3" style={{ backgroundColor: color }}>
+    <div
+      className="relative overflow-hidden whitespace-nowrap py-4"
+      style={{ backgroundColor: color, borderTop: "1px solid rgba(255,255,255,0.10)", borderBottom: "1px solid rgba(255,255,255,0.10)" }}
+    >
       <div className="inline-flex animate-marquee">
         {doubled.map((item, i) => (
-          <span key={i} className="mx-8 text-sm font-semibold text-white uppercase tracking-widest">
-            {item} <span className="mx-4 opacity-50">✦</span>
+          <span key={i} className="mx-7 font-body text-xs sm:text-sm font-semibold uppercase tracking-[0.28em] text-white/85">
+            {item}
+            <span className="mx-7 inline-block h-1.5 w-1.5 rotate-45 align-middle" style={{ backgroundColor: accent || "rgba(255,255,255,.45)" }} />
           </span>
         ))}
       </div>
@@ -1451,6 +1591,49 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
   const [invitationDialogOpen, setInvitationDialogOpen] = useState(false);
   const isPreviewMode = !landingPageId;
 
+  // Design tokens derived from the page's own palette, so each landing page
+  // gets this treatment in its own colors.
+  const onDarkBody = isDarkColor(c.bodyBg);
+  const stage = stageBackground(c.secondary, c.primary, c.accent);
+  const deepStage = stageBackground(c.darkBg, c.primary, c.accent);
+  // Surface tokens for the calm "reading" sections that sit on the body color.
+  const ink = onDarkBody ? "#FFFFFF" : "#111827";
+  const muted = onDarkBody ? "rgba(255,255,255,0.70)" : "#4B5563";
+  const surface = onDarkBody ? "rgba(255,255,255,0.05)" : "#FFFFFF";
+  const hairline = onDarkBody ? "rgba(255,255,255,0.12)" : "rgba(17,24,39,0.08)";
+  const cardShadow = onDarkBody
+    ? "0 18px 44px -26px rgba(0,0,0,.9)"
+    : "0 18px 44px -28px rgba(17,24,39,.35)";
+
+  // Scroll choreography. Skipped entirely in the admin editor: the canvas is a
+  // CSS-zoomed, independently-scrolled container, so IntersectionObserver
+  // wouldn't fire reliably there and sections could sit invisible mid-edit.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const isEditorMode = Boolean(editorBridge || editorInstance);
+  const orderSignature = sectionOrder.join(",");
+
+  useEffect(() => {
+    if (isEditorMode) return;
+    const root = rootRef.current;
+    if (!root || typeof IntersectionObserver === "undefined") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+
+    root.classList.add("lt-anim");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-in");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { rootMargin: "0px 0px -8% 0px", threshold: 0.08 }
+    );
+    root.querySelectorAll(".lt-reveal").forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [isEditorMode, orderSignature]);
+
   const floatingButtonProps: FloatingButtonRenderProps | null = (() => {
     if (!t.floatingButton?.enabled) return null;
     switch (t.floatingButton.section) {
@@ -1721,92 +1904,120 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       case 'hero':
         return (
           t.hero.visible && (
-            <section className="py-6 sm:py-8" style={{ backgroundColor: sbg('hero', c.heroBg) }}>
-              <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="rounded-3xl border border-black/5 shadow-xl overflow-hidden bg-white/95">
-                  {/* Content */}
-                  <div className="px-6 sm:px-10 pt-8 sm:pt-10 pb-6 space-y-5">
-                    {t.hero.badge && (
-                      <span
-                        className="inline-flex px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider"
-                        style={{ backgroundColor: hexToRgba(c.primary, 0.1), color: c.primary }}
-                      >
-                        {t.hero.badge}
-                      </span>
-                    )}
-                    <h1 className="font-display text-[clamp(1.6rem,3.5vw,2.8rem)] leading-tight font-bold text-gray-900">
-                      {t.hero.headline}{" "}
-                      {t.hero.highlightedWord && (
-                        <span className="relative inline-block">
-                          <span style={{ color: c.secondary }}>{t.hero.highlightedWord}</span>
-                          <svg className="absolute -bottom-1 left-0 w-full" viewBox="0 0 200 10" fill="none">
-                            <path d="M2 7 C50 2, 150 2, 198 7" stroke={c.primary} strokeWidth="3" strokeLinecap="round" />
-                          </svg>
-                        </span>
-                      )}
-                    </h1>
+            <section
+              className="relative overflow-hidden px-4 sm:px-6 lg:px-8 pt-14 pb-16 sm:pt-20 sm:pb-24"
+              style={t.sectionBg?.['hero'] ? { backgroundColor: t.sectionBg['hero'] } : stage}
+            >
+              <span className="lt-grain-layer" aria-hidden="true" />
+              {/* Aura — the page signature: a slow bloom of charged light */}
+              <span
+                aria-hidden="true"
+                className="lt-aura pointer-events-none absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 h-[520px] w-[520px] sm:h-[760px] sm:w-[760px] rounded-full blur-3xl"
+                style={{ background: `radial-gradient(circle, ${hexToRgba(c.accent, 0.4)} 0%, ${hexToRgba(c.primary, 0.22)} 45%, transparent 70%)` }}
+              />
 
-                  {/* Media — right after title, natural aspect ratio */}
-                  {heroSlides.length > 0 && (
-                    <div className="w-full aspect-video relative rounded-xl overflow-hidden">
+              <div className="relative max-w-4xl mx-auto text-center">
+                {hasContent(t.hero.badge) && (
+                  <span
+                    className="lt-rise inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.22em] backdrop-blur-sm"
+                    style={{
+                      ["--lt-i" as string]: 0,
+                      color: "#fff",
+                      backgroundColor: "rgba(255,255,255,0.10)",
+                      border: `1px solid ${hexToRgba(c.accent, 0.45)}`,
+                    }}
+                  >
+                    {t.hero.badge}
+                  </span>
+                )}
+
+                <h1
+                  className="lt-rise font-display font-bold text-white mt-7 text-[clamp(2.1rem,5.4vw,4.1rem)] leading-[1.04] tracking-[-0.025em]"
+                  style={{ ["--lt-i" as string]: 1 }}
+                >
+                  {t.hero.headline}{" "}
+                  {hasContent(t.hero.highlightedWord) && (
+                    <span className="relative inline-block whitespace-nowrap">
+                      <span style={{ color: c.accent, textShadow: `0 0 38px ${hexToRgba(c.accent, 0.5)}` }}>
+                        {t.hero.highlightedWord}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className="absolute -bottom-2 left-0 h-px w-full"
+                        style={{ background: `linear-gradient(90deg, transparent, ${c.accent}, transparent)` }}
+                      />
+                    </span>
+                  )}
+                </h1>
+
+                {heroSlides.length > 0 && (
+                  <div className="lt-rise relative mt-10" style={{ ["--lt-i" as string]: 2 }}>
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -inset-6 rounded-[40px] blur-2xl"
+                      style={{ background: `radial-gradient(60% 60% at 50% 60%, ${hexToRgba(c.accent, 0.4)} 0%, transparent 70%)` }}
+                    />
+                    <div
+                      className="relative w-full aspect-video rounded-[24px] overflow-hidden"
+                      style={{
+                        border: "1px solid rgba(255,255,255,0.16)",
+                        boxShadow: `0 40px 80px -30px rgba(0,0,0,.7), 0 0 0 1px ${hexToRgba(c.accent, 0.14)}`,
+                      }}
+                    >
                       <div className="absolute inset-0">{renderHeroCarousel()}</div>
                     </div>
-                  )}
-                    {hasContent(t.hero.subheadline) && (
-                      <p className="text-sm sm:text-base text-gray-600 font-body leading-relaxed">
-                        {t.hero.subheadline}
-                      </p>
-                    )}
-                    {Array.isArray(t.hero.bulletPoints) && t.hero.bulletPoints.filter(Boolean).length > 0 && (
-                      <ul className="grid sm:grid-cols-2 gap-2">
-                        {t.hero.bulletPoints.filter(Boolean).map((point, i) => (
-                          <li key={i} className="flex items-start gap-2 text-sm text-gray-700 font-body">
-                            <span
-                              className="mt-0.5 flex-shrink-0 h-4 w-4 rounded-full flex items-center justify-center text-white text-[10px]"
-                              style={{ backgroundColor: c.primary }}
-                            >✓</span>
-                            {point}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    <div className="flex flex-wrap items-center gap-4 pt-1">
-                      {t.hero.ctaButtonAction === "url" ? (
-                        <a
-                          href={resolveLink(t.hero.ctaButtonLink)}
-                          className="inline-flex items-center px-6 py-3 rounded-full text-white font-semibold text-sm sm:text-base shadow-md transition-all duration-300 hover:-translate-y-0.5"
-                          style={{ backgroundColor: c.primary }}
-                        >
-                          {hasContent(t.hero.ctaButtonText) ? t.hero.ctaButtonText : "Get Started"}
-                          <svg className="ml-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                          </svg>
-                        </a>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setInvitationDialogOpen(true)}
-                          className="inline-flex items-center px-6 py-3 rounded-full text-white font-semibold text-sm sm:text-base shadow-md transition-all duration-300 hover:-translate-y-0.5"
-                          style={{ backgroundColor: c.primary }}
-                        >
-                          {hasContent(t.hero.ctaButtonText) ? t.hero.ctaButtonText : "Get Started"}
-                          <svg className="ml-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                          </svg>
-                        </button>
-                      )}
-                      {Array.isArray(t.hero.floatingStats) && t.hero.floatingStats.length > 0 && (
-                        <div className="flex gap-5">
-                          {t.hero.floatingStats.map((stat, i) => (
-                            <div key={i} className="text-center">
-                              <div className="text-lg font-bold font-display" style={{ color: c.secondary }}>{stat.value}</div>
-                              <div className="text-[10px] text-gray-500 font-body uppercase tracking-wider">{stat.label}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
                   </div>
+                )}
+
+                {hasContent(t.hero.subheadline) && (
+                  <p
+                    className="lt-rise font-body mx-auto mt-9 max-w-2xl text-base sm:text-lg leading-relaxed text-white/75"
+                    style={{ ["--lt-i" as string]: 3 }}
+                  >
+                    {t.hero.subheadline}
+                  </p>
+                )}
+
+                {Array.isArray(t.hero.bulletPoints) && t.hero.bulletPoints.filter(Boolean).length > 0 && (
+                  <ul className="lt-rise mt-8 flex flex-wrap justify-center gap-2.5" style={{ ["--lt-i" as string]: 4 }}>
+                    {t.hero.bulletPoints.filter(Boolean).map((point, i) => (
+                      <li
+                        key={i}
+                        className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs sm:text-sm font-body text-white/85 backdrop-blur-sm"
+                        style={{ backgroundColor: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" style={{ color: c.accent }} />
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="lt-rise mt-11 flex flex-col items-center gap-8" style={{ ["--lt-i" as string]: 5 }}>
+                  {t.hero.ctaButtonAction === "url" ? (
+                    <a href={resolveLink(t.hero.ctaButtonLink)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                      <span className="lt-cta-sheen" aria-hidden="true" />
+                      {hasContent(t.hero.ctaButtonText) ? t.hero.ctaButtonText : "Get Started"}
+                      <CtaArrow />
+                    </a>
+                  ) : (
+                    <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                      <span className="lt-cta-sheen" aria-hidden="true" />
+                      {hasContent(t.hero.ctaButtonText) ? t.hero.ctaButtonText : "Get Started"}
+                      <CtaArrow />
+                    </button>
+                  )}
+
+                  {Array.isArray(t.hero.floatingStats) && t.hero.floatingStats.filter((s) => s?.value || s?.label).length > 0 && (
+                    <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-5">
+                      {t.hero.floatingStats.map((stat, i) => (
+                        <div key={i} className="text-center">
+                          <div className="font-display text-xl sm:text-2xl font-bold text-white">{stat.value}</div>
+                          <div className="mt-1 font-body text-[10px] uppercase tracking-[0.2em] text-white/55">{stat.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </section>
@@ -1814,37 +2025,39 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         );
       
       case 'marquee':
-        return t.marquee.enabled && <Marquee items={t.marquee.items} color={c.secondary} />;
+        return t.marquee.enabled && <Marquee items={t.marquee.items} color={sbg('marquee', c.secondary)} accent={c.accent} />;
       
       case 'why':
         return t.why.visible && (
-        <section className="py-8 lg:py-14" style={{ backgroundColor: sbg('why', c.bodyBg) }}>
+        <section className="py-16 lg:py-24" style={{ backgroundColor: sbg('why', c.bodyBg) }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-6 lg:mb-10">
-              <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-                {t.why.title}
-              </h2>
-              <p className="text-lg text-gray-600 font-body">{t.why.subtitle}</p>
-            </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <SectionHeading title={t.why.title} subtitle={t.why.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-12 lg:mb-16" />
+            <div className="grid gap-6 lg:gap-7 sm:grid-cols-2 lg:grid-cols-3">
               {t.why.points.map((point, i) => {
                 const pointMedia = renderMedia(point.image, mediaKey("why", "points", i, "image"), {
-                  className: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-500",
+                  className: "w-full h-full object-cover",
                   alt: point.title,
                 });
                 return (
                 <div
                   key={i}
-                  className="group rounded-2xl overflow-hidden bg-white shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100"
+                  className="lt-reveal lt-card lt-zoom group rounded-[26px] overflow-hidden"
+                  style={{
+                    ["--lt-i" as string]: i,
+                    backgroundColor: surface,
+                    border: `1px solid ${hairline}`,
+                    boxShadow: cardShadow,
+                  }}
                 >
-                  {pointMedia && (
-                    <div className="h-52 overflow-hidden">
-                      {pointMedia}
-                    </div>
-                  )}
-                  <div className="p-6">
-                    <h3 className="font-display text-xl font-bold text-gray-900 mb-2">{point.title}</h3>
-                    <p className="text-gray-600 font-body leading-relaxed">{point.description}</p>
+                  {pointMedia && <div className="h-56 overflow-hidden">{pointMedia}</div>}
+                  <div className="p-7">
+                    <RitualRule color={c.accent} className="mb-4" />
+                    <h3 className="font-display text-xl sm:text-2xl font-bold leading-snug" style={{ color: ink }}>
+                      {point.title}
+                    </h3>
+                    <p className="font-body mt-3 leading-relaxed" style={{ color: muted }}>
+                      {point.description}
+                    </p>
                   </div>
                 </div>
               );})}
@@ -1855,38 +2068,53 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       
       case 'about':
         return t.about.visible && (
-        <section className="py-8 lg:py-14" style={{ backgroundColor: sbg('about', hexToRgba(c.primary, 0.04)) }}>
+        <section className="py-16 lg:py-24" style={{ backgroundColor: sbg('about', hexToRgba(c.primary, 0.05)) }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid lg:grid-cols-2 gap-10 items-center">
-              <div className="relative">
-                <div
-                  className="absolute -inset-4 rounded-3xl rotate-2 opacity-10"
-                  style={{ backgroundColor: c.secondary }}
-                />
-                {renderMedia(t.about.image, mediaKey("about", "image"), {
-                  className: "relative rounded-3xl shadow-xl w-full h-full object-cover",
-                  wrapperClassName:
-                    "relative w-full max-w-sm mx-auto aspect-square rounded-3xl overflow-hidden",
-                  alt: t.about.name,
-                })}
-              </div>
-              <div className="space-y-6">
+            <div className="grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-12 lg:gap-16 items-center">
+              <div className="lt-reveal relative mx-auto w-full max-w-sm">
                 <span
-                  className="inline-block px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider"
-                  style={{ backgroundColor: hexToRgba(c.secondary, 0.12), color: c.secondary }}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -inset-5 rounded-[40px] blur-2xl"
+                  style={{ background: `radial-gradient(circle at 50% 45%, ${hexToRgba(c.accent, 0.32)} 0%, transparent 70%)` }}
+                />
+                <div className="lt-zoom relative aspect-square overflow-hidden rounded-[28px]" style={{ border: `1px solid ${hexToRgba(c.accent, 0.28)}`, boxShadow: cardShadow }}>
+                  {renderMedia(t.about.image, mediaKey("about", "image"), {
+                    className: "w-full h-full object-cover",
+                    wrapperClassName: "absolute inset-0",
+                    alt: t.about.name,
+                  })}
+                </div>
+              </div>
+              <div>
+                {hasContent(t.about.title) && (
+                  <span
+                    className="lt-reveal inline-flex items-center rounded-full px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em]"
+                    style={{ backgroundColor: hexToRgba(c.accent, 0.12), color: c.accent, border: `1px solid ${hexToRgba(c.accent, 0.3)}` }}
+                  >
+                    {t.about.title}
+                  </span>
+                )}
+                <h2
+                  className="lt-reveal font-display mt-6 text-[clamp(1.9rem,4vw,3.1rem)] font-bold leading-[1.08] tracking-[-0.02em]"
+                  style={{ ["--lt-i" as string]: 1, color: ink }}
                 >
-                  {t.about.title}
-                </span>
-                <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900">{t.about.name}</h2>
-                <p className="text-gray-600 font-body text-lg leading-relaxed">{t.about.description}</p>
+                  {t.about.name}
+                </h2>
+                <p
+                  className="lt-reveal font-body mt-5 text-base sm:text-lg leading-relaxed whitespace-pre-line"
+                  style={{ ["--lt-i" as string]: 2, color: muted }}
+                >
+                  {t.about.description}
+                </p>
                 {t.about.credentials.length > 0 && (
-                  <ul className="space-y-2">
+                  <ul className="lt-reveal mt-8 flex flex-wrap gap-2.5" style={{ ["--lt-i" as string]: 3 }}>
                     {t.about.credentials.map((cred, i) => (
-                      <li key={i} className="flex items-center gap-3 text-gray-700 font-body">
-                        <span
-                          className="h-2 w-2 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: c.primary }}
-                        />
+                      <li
+                        key={i}
+                        className="inline-flex items-center gap-2 rounded-full px-4 py-2 font-body text-sm"
+                        style={{ backgroundColor: surface, border: `1px solid ${hairline}`, color: ink }}
+                      >
+                        <span className="h-1.5 w-1.5 rotate-45 flex-shrink-0" style={{ backgroundColor: c.accent }} />
                         {cred}
                       </li>
                     ))}
@@ -1900,9 +2128,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       
       case 'logos':
         return t.logos.enabled && t.logos.logos.length > 0 && (
-        <section className="py-8 border-y border-gray-100" style={{ backgroundColor: sbg('logos', c.bodyBg) }}>
+        <section className="py-12" style={{ backgroundColor: sbg('logos', c.bodyBg), borderTop: `1px solid ${hairline}`, borderBottom: `1px solid ${hairline}` }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <p className="text-center text-xs font-semibold text-gray-400 uppercase tracking-widest mb-6">
+            <p className="lt-reveal text-center font-body text-[11px] font-semibold uppercase tracking-[0.28em] mb-8" style={{ color: muted }}>
               {t.logos.title}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-10 opacity-60">
@@ -1927,17 +2155,18 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       
       case 'gallery':
         return t.gallery.visible && t.gallery.images.length > 0 && (
-        <section className="py-8 lg:py-14" style={{ backgroundColor: sbg('gallery', c.bodyBg) }}>
+        <section className="py-16 lg:py-24" style={{ backgroundColor: sbg('gallery', c.bodyBg) }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-6 lg:mb-8">
-              <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 mb-4">{t.gallery.title}</h2>
-              <p className="text-lg text-gray-600 font-body">{t.gallery.subtitle}</p>
-            </div>
+            <SectionHeading title={t.gallery.title} subtitle={t.gallery.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-12" />
             <div className="flex flex-wrap justify-center gap-4">
               {t.gallery.images.map((img, i) => (
-                <div key={i} className="group relative rounded-2xl overflow-hidden aspect-[4/3] shadow-md hover:shadow-xl transition-all duration-300 w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.667rem)]">
+                <div
+                  key={i}
+                  className="lt-reveal lt-card lt-zoom group relative aspect-[4/3] w-full overflow-hidden rounded-[22px] sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.667rem)]"
+                  style={{ ["--lt-i" as string]: i % 3, border: `1px solid ${hairline}`, boxShadow: cardShadow }}
+                >
                   {renderMedia(img.url, mediaKey("gallery", "images", i, "url"), {
-                    className: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-500",
+                    className: "w-full h-full object-cover",
                     alt: img.caption,
                   })}
                   {img.caption && (
@@ -1954,43 +2183,64 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       
       case 'stats':
         return t.stats.visible && (
-        <section className="py-8 lg:py-14 relative overflow-hidden" style={{ backgroundColor: sbg('stats', c.darkBg) }}>
+        <section
+          className="relative overflow-hidden py-16 lg:py-24"
+          style={t.sectionBg?.['stats'] ? { backgroundColor: t.sectionBg['stats'] } : deepStage}
+        >
+          <span className="lt-grain-layer" aria-hidden="true" />
           {t.stats.backgroundImage && (
             <div
-              className="absolute inset-0 opacity-20 bg-cover bg-center"
+              className="absolute inset-0 opacity-15 bg-cover bg-center"
               style={{ backgroundImage: `url(${t.stats.backgroundImage})` }}
             />
           )}
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">{t.stats.title}</h2>
-            <p className="text-lg text-white/80 font-body mb-12 max-w-2xl mx-auto">{t.stats.subtitle}</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mb-12">
-              {t.stats.stats.map((stat, i) => (
-                <div key={i}>
-                  <div className="text-4xl lg:text-5xl font-bold font-display mb-1 text-white">
-                    {stat.value}
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <SectionHeading title={t.stats.title} subtitle={t.stats.subtitle} accent={c.accent} onDark className="mb-14" />
+            <div className={`grid gap-5 lg:gap-6 grid-cols-1 sm:grid-cols-2 ${t.stats.stats.length >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
+              {t.stats.stats.map((stat, i) => {
+                // Labels are used two ways across pages: short captions
+                // ("Students") and full sentences used as a checklist. Micro-caps
+                // only suits the former, so long labels fall back to plain body text.
+                const isSentence = (stat.label || "").length > 28;
+                return (
+                <div
+                  key={i}
+                  className="lt-reveal lt-card rounded-2xl p-6 text-center backdrop-blur-sm"
+                  style={{
+                    ["--lt-i" as string]: i,
+                    backgroundColor: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.13)",
+                  }}
+                >
+                  <div className="font-display text-2xl lg:text-3xl font-bold leading-tight text-white">{stat.value}</div>
+                  <div
+                    className={
+                      isSentence
+                        ? "font-body mt-3 text-sm leading-relaxed text-white/70"
+                        : "font-body mt-2 text-[10px] uppercase tracking-[0.2em] text-white/55"
+                    }
+                  >
+                    {stat.label}
                   </div>
-                  <div className="text-sm text-white/70 font-body uppercase tracking-wider">{stat.label}</div>
                 </div>
-              ))}
+              );})}
             </div>
-            {t.stats.ctaButtonAction === "url" ? (
-              <a
-                href={resolveLink(t.stats.ctaButtonLink)}
-                className="inline-flex items-center px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
-                style={{ backgroundColor: c.primary }}
-              >
-                {t.stats.ctaButtonText}
-              </a>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setInvitationDialogOpen(true)}
-                className="inline-flex items-center px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
-                style={{ backgroundColor: c.primary }}
-              >
-                {t.stats.ctaButtonText}
-              </button>
+            {hasContent(t.stats.ctaButtonText) && (
+              <div className="lt-reveal mt-14 text-center">
+                {t.stats.ctaButtonAction === "url" ? (
+                  <a href={resolveLink(t.stats.ctaButtonLink)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                    <span className="lt-cta-sheen" aria-hidden="true" />
+                    {t.stats.ctaButtonText}
+                    <CtaArrow />
+                  </a>
+                ) : (
+                  <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                    <span className="lt-cta-sheen" aria-hidden="true" />
+                    {t.stats.ctaButtonText}
+                    <CtaArrow />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </section>
@@ -1998,48 +2248,59 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       
       case 'testimonials':
         return t.testimonials.visible && t.testimonials.items.length > 0 && (
-        <section className="py-8 lg:py-14" style={{ backgroundColor: sbg('testimonials', c.bodyBg) }}>
+        <section className="py-16 lg:py-24" style={{ backgroundColor: sbg('testimonials', c.bodyBg) }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-6 lg:mb-10">
-              <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-                {t.testimonials.title}
-              </h2>
-              <p className="text-lg text-gray-600 font-body">{t.testimonials.subtitle}</p>
-            </div>
+            <SectionHeading title={t.testimonials.title} subtitle={t.testimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-12 lg:mb-16" />
             <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
               {t.testimonials.items.map((item, i) => (
                 <div
                   key={i}
-                  className="rounded-2xl p-8 bg-white shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col"
+                  className="lt-reveal lt-card relative flex flex-col overflow-hidden rounded-[26px] p-8"
+                  style={{
+                    ["--lt-i" as string]: i,
+                    backgroundColor: surface,
+                    border: `1px solid ${hairline}`,
+                    boxShadow: cardShadow,
+                  }}
                 >
-                  <div className="flex items-center gap-4 mb-6">
+                  <span
+                    aria-hidden="true"
+                    className="font-display pointer-events-none absolute -top-3 right-6 select-none text-[6rem] leading-none"
+                    style={{ color: hexToRgba(c.accent, 0.12) }}
+                  >
+                    &ldquo;
+                  </span>
+                  <div className="relative flex gap-1">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <svg key={s} className="h-4 w-4" viewBox="0 0 20 20" fill={c.accent}>
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    ))}
+                  </div>
+                  <p className="font-body relative mt-5 flex-1 text-base leading-relaxed" style={{ color: ink }}>
+                    {item.quote}
+                  </p>
+                  <div className="relative mt-7 flex items-center gap-3.5 pt-5" style={{ borderTop: `1px solid ${hairline}` }}>
                     {item.image ? (
                       renderMedia(item.image, mediaKey("testimonials", "items", i, "image"), {
-                        className: "h-14 w-14 rounded-full object-cover shadow-sm",
+                        className: "h-12 w-12 rounded-full object-cover",
+                        wrapperClassName: "h-12 w-12 rounded-full overflow-hidden flex-shrink-0",
                         alt: item.name,
                       })
                     ) : (
                       <div
-                        className="h-14 w-14 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                        style={{ backgroundColor: c.secondary }}
+                        className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full font-display text-lg font-bold text-white"
+                        style={{ backgroundImage: `linear-gradient(135deg, ${c.primary}, ${c.accent})` }}
                       >
                         {item.name.charAt(0)}
                       </div>
                     )}
-                    <div>
-                      <div className="font-semibold text-gray-900 font-body">{item.name}</div>
-                      <div className="text-sm text-gray-500 font-body">{item.role}</div>
+                    <div className="min-w-0">
+                      <div className="font-body font-semibold truncate" style={{ color: ink }}>{item.name}</div>
+                      {hasContent(item.role) && (
+                        <div className="font-body text-sm truncate" style={{ color: muted }}>{item.role}</div>
+                      )}
                     </div>
-                  </div>
-                  <p className="text-gray-600 font-body leading-relaxed flex-1 italic">
-                    &ldquo;{item.quote}&rdquo;
-                  </p>
-                  <div className="flex gap-1 mt-4">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <svg key={s} className="h-4 w-4" viewBox="0 0 20 20" fill={c.primary}>
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
                   </div>
                 </div>
               ))}
@@ -2050,17 +2311,12 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
       case 'videoTestimonials':
         return t.videoTestimonials.visible && t.videoTestimonials.items.length > 0 && (
-        <section className="py-8 lg:py-14 overflow-hidden" style={{ backgroundColor: sbg('videoTestimonials', hexToRgba(c.darkBg, 0.04)) }}>
+        <section className="py-16 lg:py-24 overflow-hidden" style={{ backgroundColor: sbg('videoTestimonials', hexToRgba(c.secondary, 0.05)) }}>
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <div className="text-center mb-6 lg:mb-8">
-              <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-                {t.videoTestimonials.title}
-              </h2>
-              <p className="text-lg text-gray-600 font-body">{t.videoTestimonials.subtitle}</p>
-            </div>
+            <SectionHeading title={t.videoTestimonials.title} subtitle={t.videoTestimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-12" />
             <VideoTestimonialsSlider
               items={videoTestimonialItems}
-              primaryColor={c.primary}
+              primaryColor={c.accent}
             />
           </div>
         </section>
@@ -2068,99 +2324,115 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       
       case 'program':
         return t.program.visible && (
-      <section className="py-8 lg:py-14" style={{ backgroundColor: sbg('program', hexToRgba(c.secondary, 0.04)) }}>
+      <section className="py-16 lg:py-24" style={{ backgroundColor: sbg('program', hexToRgba(c.primary, 0.05)) }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-6 lg:mb-8">
-            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              {t.program.title}
-            </h2>
-            <p className="text-base sm:text-lg text-gray-600 font-body">{t.program.subtitle}</p>
-          </div>
-          <div className="grid gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <SectionHeading title={t.program.title} subtitle={t.program.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-12 lg:mb-16" />
+          <div className="grid gap-5 lg:gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {t.program.points.map((point, i) => (
               <div
                 key={i}
-                className="flex items-center gap-3 sm:gap-4 rounded-2xl px-4 sm:px-5 py-3.5 sm:py-4 shadow-sm"
+                className="lt-reveal lt-card group relative overflow-hidden rounded-[26px] p-7 sm:p-8"
                 style={{
-                  background: `linear-gradient(135deg, ${hexToRgba(c.secondary, 0.18)} 0%, ${hexToRgba(c.secondary, 0.32)} 100%)`,
+                  ["--lt-i" as string]: i,
+                  backgroundColor: surface,
+                  border: `1px solid ${hairline}`,
+                  boxShadow: cardShadow,
                 }}
               >
-                {/* Icon box */}
-                <div className="flex-shrink-0 h-12 w-12 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-white shadow-sm flex items-center justify-center">
-                  <ProgramIcon
-                    name={point.icon}
-                    className="h-6 w-6 sm:h-7 sm:w-7"
-                    style={{ color: c.primary } as React.CSSProperties}
-                  />
-                </div>
-                {/* Text */}
-                <div className="min-w-0 flex-1">
-                  <p className="font-display text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 leading-tight line-clamp-2">
+                {/* Corner bloom, lit on hover */}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full blur-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                  style={{ background: `radial-gradient(circle, ${hexToRgba(c.accent, 0.35)} 0%, transparent 70%)` }}
+                />
+                <div className="relative">
+                  <div
+                    className="flex h-14 w-14 items-center justify-center rounded-2xl transition-transform duration-500 group-hover:scale-110"
+                    style={{
+                      backgroundImage: `linear-gradient(135deg, ${hexToRgba(c.primary, 0.16)} 0%, ${hexToRgba(c.accent, 0.22)} 100%)`,
+                      border: `1px solid ${hexToRgba(c.accent, 0.28)}`,
+                    }}
+                  >
+                    <ProgramIcon name={point.icon} className="h-7 w-7" style={{ color: c.accent } as React.CSSProperties} />
+                  </div>
+                  <h3 className="font-display mt-6 text-xl sm:text-2xl font-bold leading-snug" style={{ color: ink }}>
                     {point.title}
-                  </p>
-                  <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-gray-500 mt-0.5 line-clamp-2">
+                  </h3>
+                  <p className="font-body mt-3 text-sm sm:text-base leading-relaxed" style={{ color: muted }}>
                     {point.description}
                   </p>
                 </div>
               </div>
             ))}
           </div>
-          <div className="text-center mt-12">
-            {t.program.ctaButtonAction === "url" ? (
-              <a
-                href={resolveLink(t.program.ctaButtonLink)}
-                className="inline-flex items-center px-8 sm:px-10 py-3 sm:py-4 rounded-full text-white font-semibold text-base sm:text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
-                style={{ backgroundColor: c.primary }}
-              >
-                {t.program.ctaButtonText}
-                <svg className="ml-2 h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-              </a>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setInvitationDialogOpen(true)}
-                className="inline-flex items-center px-8 sm:px-10 py-3 sm:py-4 rounded-full text-white font-semibold text-base sm:text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
-                style={{ backgroundColor: c.primary }}
-              >
-                {t.program.ctaButtonText}
-                <svg className="ml-2 h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-              </button>
-            )}
-          </div>
+          {hasContent(t.program.ctaButtonText) && (
+            <div className="lt-reveal text-center mt-14">
+              {t.program.ctaButtonAction === "url" ? (
+                <a href={resolveLink(t.program.ctaButtonLink)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                  <span className="lt-cta-sheen" aria-hidden="true" />
+                  {t.program.ctaButtonText}
+                  <CtaArrow />
+                </a>
+              ) : (
+                <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                  <span className="lt-cta-sheen" aria-hidden="true" />
+                  {t.program.ctaButtonText}
+                  <CtaArrow />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </section>
       );
       
       case 'bonus':
         return t.bonus.enabled && t.bonus.items.length > 0 && (
-        <section className="py-8 lg:py-14" style={{ backgroundColor: sbg('bonus', c.bodyBg) }}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-6 lg:mb-8">
-              {t.bonus.title}
-            </h2>
-            <div className="grid gap-6 md:grid-cols-2 max-w-4xl mx-auto">
+        <section
+          className="relative overflow-hidden py-16 lg:py-24"
+          style={t.sectionBg?.['bonus'] ? { backgroundColor: t.sectionBg['bonus'] } : stage}
+        >
+          <span className="lt-grain-layer" aria-hidden="true" />
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <SectionHeading title={t.bonus.title} accent={c.accent} onDark className="mb-12 lg:mb-16" />
+            <div className={`grid gap-6 lg:gap-8 mx-auto ${t.bonus.items.length >= 3 ? "sm:grid-cols-2 lg:grid-cols-3 max-w-6xl" : "sm:grid-cols-2 max-w-4xl"}`}>
               {t.bonus.items.map((item, i) => (
                 <div
                   key={i}
-                  className="flex gap-5 rounded-2xl p-6 bg-white shadow-md border border-gray-100"
+                  className="lt-reveal lt-card lt-zoom group relative overflow-hidden rounded-[26px] p-6 text-center backdrop-blur-sm"
+                  style={{
+                    ["--lt-i" as string]: i,
+                    backgroundColor: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.13)",
+                  }}
                 >
-                  {item.image ? (
-                    renderMedia(item.image, mediaKey("bonus", "items", i, "image"), {
-                      className: "h-20 w-20 rounded-xl object-cover flex-shrink-0",
-                      alt: item.title,
-                    })
-                  ) : (
-                    <div
-                      className="h-20 w-20 rounded-xl flex-shrink-0 flex items-center justify-center text-3xl"
-                      style={{ backgroundColor: hexToRgba(c.accent, 0.1) }}
-                    >
-                      🎁
-                    </div>
-                  )}
-                  <div>
-                    <h3 className="font-display text-lg font-bold text-gray-900 mb-1">{item.title}</h3>
-                    <p className="text-gray-600 font-body text-sm leading-relaxed">{item.description}</p>
+                  <div className="relative mx-auto w-full max-w-[220px]">
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -inset-3 rounded-3xl blur-2xl opacity-70 transition-opacity duration-500 group-hover:opacity-100"
+                      style={{ background: `radial-gradient(circle, ${hexToRgba(c.accent, 0.45)} 0%, transparent 70%)` }}
+                    />
+                    {item.image ? (
+                      <div className="relative aspect-square overflow-hidden rounded-2xl" style={{ border: "1px solid rgba(255,255,255,0.16)" }}>
+                        {renderMedia(item.image, mediaKey("bonus", "items", i, "image"), {
+                          className: "w-full h-full object-cover",
+                          wrapperClassName: "absolute inset-0",
+                          alt: item.title,
+                        })}
+                      </div>
+                    ) : (
+                      <div
+                        className="relative flex aspect-square items-center justify-center rounded-2xl text-5xl"
+                        style={{ backgroundColor: hexToRgba(c.accent, 0.14), border: "1px solid rgba(255,255,255,0.16)" }}
+                      >
+                        🎁
+                      </div>
+                    )}
                   </div>
+                  <h3 className="font-display mt-6 text-lg sm:text-xl font-bold leading-snug text-white">{item.title}</h3>
+                  {hasContent(item.description) && (
+                    <p className="font-body mt-2 text-sm leading-relaxed text-white/65">{item.description}</p>
+                  )}
                 </div>
               ))}
             </div>
@@ -2170,80 +2442,89 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       
       case 'invitation':
         return t.invitation.enabled && (
-        <section className="py-8 sm:py-10" style={{ backgroundColor: sbg('invitation', hexToRgba(c.primary, 0.06)) }}>
-          <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <div className="bg-white rounded-[32px] shadow-xl p-6 sm:p-8 lg:p-10 relative overflow-hidden">
-              <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full" style={{ background: hexToRgba(c.primary, 0.12) }} />
-              <div className="relative z-10 space-y-6">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="max-w-2xl">
-                    <div className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide bg-pink-100 text-pink-600 px-3 py-1 rounded-full">
+        <section className="py-16 lg:py-24" style={{ backgroundColor: sbg('invitation', hexToRgba(c.primary, 0.06)) }}>
+          <div className="max-w-5xl mx-auto px-4 sm:px-6">
+            <div className="lt-reveal relative overflow-hidden rounded-[32px] p-7 sm:p-10 lg:p-12" style={stage}>
+              <span className="lt-grain-layer" aria-hidden="true" />
+              <span
+                aria-hidden="true"
+                className="lt-aura pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full blur-3xl"
+                style={{ background: `radial-gradient(circle, ${hexToRgba(c.accent, 0.5)} 0%, transparent 70%)` }}
+              />
+              <div className="relative z-10">
+                <div className="text-center">
+                  {(hasContent(t.invitation.badgeText) || hasContent(t.invitation.badgeEmoji)) && (
+                    <div
+                      className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-sm"
+                      style={{ backgroundColor: "rgba(255,255,255,0.10)", border: `1px solid ${hexToRgba(c.accent, 0.45)}` }}
+                    >
                       <span>{t.invitation.badgeEmoji}</span>
                       {t.invitation.badgeText}
                     </div>
-                    <h2 className="font-display text-3xl lg:text-4xl font-bold text-gray-900 mt-4">{t.invitation.title}</h2>
-                    <p className="text-gray-600 mt-2 text-sm sm:text-base">{t.invitation.subtitle}</p>
-                  </div>
-                  <div className="flex items-center gap-3 rounded-3xl bg-gray-50/80 p-4 shadow-inner">
-                    <CheckCircle2 className="h-6 w-6 text-emerald-500" />
-                    <p className="text-sm font-semibold text-gray-700">{t.invitation.availabilityText}</p>
-                  </div>
+                  )}
+                  <h2 className="font-display mt-6 text-[clamp(1.8rem,3.6vw,2.9rem)] font-bold leading-[1.1] tracking-[-0.02em] text-white">
+                    {t.invitation.title}
+                  </h2>
+                  {hasContent(t.invitation.subtitle) && (
+                    <p className="font-body mx-auto mt-4 max-w-2xl text-sm sm:text-base leading-relaxed text-white/75">
+                      {t.invitation.subtitle}
+                    </p>
+                  )}
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="flex items-center gap-3 border border-gray-100 rounded-2xl p-4 bg-gray-50/60">
-                    <div className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-sm">
-                      <CalendarDays className="h-5 w-5 text-pink-500" />
+                <div className="mt-10 grid gap-4 sm:grid-cols-3">
+                  {[
+                    { Icon: CalendarDays, label: t.invitation.dateLabel, value: t.invitation.dateValue },
+                    { Icon: Clock3, label: t.invitation.timeLabel, value: t.invitation.timeValue },
+                    { Icon: MapPin, label: t.invitation.venueLabel, value: t.invitation.venueValue },
+                  ].map(({ Icon, label, value }, i) => (
+                    <div
+                      key={i}
+                      className="rounded-2xl p-5 text-center backdrop-blur-sm"
+                      style={{ backgroundColor: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.13)" }}
+                    >
+                      <Icon className="mx-auto h-5 w-5" style={{ color: c.accent }} />
+                      <p className="font-body mt-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">{label}</p>
+                      <p className="font-display mt-1.5 text-lg font-bold leading-snug text-white">{value}</p>
                     </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold">{t.invitation.dateLabel}</p>
-                      <p className="text-xl font-bold text-gray-900">{t.invitation.dateValue}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 border border-gray-100 rounded-2xl p-4 bg-gray-50/60">
-                    <div className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-sm">
-                      <Clock3 className="h-5 w-5 text-violet-500" />
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold">{t.invitation.timeLabel}</p>
-                      <p className="text-xl font-bold text-gray-900">{t.invitation.timeValue}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 border border-gray-100 rounded-2xl p-4 bg-gray-50/60">
-                    <div className="h-12 w-12 rounded-full bg-white flex items-center justify-center shadow-sm">
-                      <MapPin className="h-5 w-5 text-emerald-500" />
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold">{t.invitation.venueLabel}</p>
-                      <p className="text-sm font-semibold text-gray-900">{t.invitation.venueValue}</p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
-                <div className="flex flex-col items-center gap-2 pt-2">
+                {hasContent(t.invitation.availabilityText) && (
+                  <div className="mt-6 flex items-center justify-center gap-2.5 text-center">
+                    <CheckCircle2 className="h-4 w-4 flex-shrink-0" style={{ color: c.accent }} />
+                    <p className="font-body text-sm text-white/75">{t.invitation.availabilityText}</p>
+                  </div>
+                )}
+
+                <div className="mt-9 flex flex-col items-center gap-3">
                   {t.invitation.buttonAction === "url" ? (
                     <a
                       href={resolveLink(t.invitation.buttonLink)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full sm:w-auto text-base font-semibold h-14 rounded-2xl px-10 inline-flex items-center justify-center"
-                      style={{ backgroundColor: c.primary, color: t.invitation.buttonTextColor || "#1B1F3A" }}
+                      className={`${ctaClass("lg")} w-full sm:w-auto`}
+                      style={{ ...ctaStyle(c.primary, c.accent), ...(t.invitation.buttonTextColor ? { color: t.invitation.buttonTextColor } : {}) }}
                     >
+                      <span className="lt-cta-sheen" aria-hidden="true" />
                       {t.invitation.buttonText}
+                      <CtaArrow />
                     </a>
                   ) : (
-                    <Button
-                      size="lg"
-                      className="w-full sm:w-auto text-base font-semibold h-14 rounded-2xl px-10"
-                      style={{ backgroundColor: c.primary, color: t.invitation.buttonTextColor || "#1B1F3A" }}
+                    <button
+                      type="button"
+                      className={`${ctaClass("lg")} w-full sm:w-auto`}
+                      style={{ ...ctaStyle(c.primary, c.accent), ...(t.invitation.buttonTextColor ? { color: t.invitation.buttonTextColor } : {}) }}
                       onClick={() => setInvitationDialogOpen(true)}
                     >
+                      <span className="lt-cta-sheen" aria-hidden="true" />
                       {t.invitation.buttonText}
-                    </Button>
+                      <CtaArrow />
+                    </button>
                   )}
-                  <p className="text-xs text-gray-500 text-center">
-                    {t.invitation.supportText}
-                  </p>
+                  {hasContent(t.invitation.supportText) && (
+                    <p className="font-body text-center text-xs text-white/55">{t.invitation.supportText}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -2310,20 +2591,28 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             if (block.textFormat === "bullets") {
               const bullets = block.content.split('\n').filter(line => line.trim());
               return (
-                <div className="space-y-4">
+                <div>
+                  <div className="lt-reveal mb-5"><RitualRule color={c.accent} /></div>
                   {block.heading && (
-                    <h3 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
+                    <h3
+                      className="lt-reveal font-display text-[clamp(1.7rem,3.4vw,2.75rem)] font-bold leading-[1.1] tracking-[-0.02em]"
+                      style={{ ["--lt-i" as string]: 1, color: ink }}
+                    >
                       {block.heading}
                     </h3>
                   )}
-                  <ul className="space-y-3">
+                  <ul className="mt-7 space-y-4">
                     {bullets.map((bullet, i) => (
-                      <li key={i} className="flex items-start gap-3 text-base sm:text-lg text-gray-700 font-body">
+                      <li
+                        key={i}
+                        className="lt-reveal flex items-start gap-3.5 font-body text-base sm:text-lg leading-relaxed"
+                        style={{ ["--lt-i" as string]: i + 2, color: muted }}
+                      >
                         <span
-                          className="mt-1 flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center text-white text-sm font-semibold"
-                          style={{ backgroundColor: c.primary }}
+                          className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full"
+                          style={{ backgroundColor: hexToRgba(c.accent, 0.14), border: `1px solid ${hexToRgba(c.accent, 0.32)}` }}
                         >
-                          ✓
+                          <CheckCircle2 className="h-3.5 w-3.5" style={{ color: c.accent }} />
                         </span>
                         <span className="flex-1">{bullet}</span>
                       </li>
@@ -2334,13 +2623,20 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             } else {
               // plain text
               return (
-                <div className="space-y-4">
+                <div>
+                  <div className="lt-reveal mb-5"><RitualRule color={c.accent} /></div>
                   {block.heading && (
-                    <h3 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
+                    <h3
+                      className="lt-reveal font-display text-[clamp(1.7rem,3.4vw,2.75rem)] font-bold leading-[1.1] tracking-[-0.02em]"
+                      style={{ ["--lt-i" as string]: 1, color: ink }}
+                    >
                       {block.heading}
                     </h3>
                   )}
-                  <p className="text-base sm:text-lg text-gray-700 font-body leading-relaxed whitespace-pre-wrap">
+                  <p
+                    className="lt-reveal font-body mt-6 text-base sm:text-lg leading-relaxed whitespace-pre-wrap"
+                    style={{ ["--lt-i" as string]: 2, color: muted }}
+                  >
                     {block.content}
                   </p>
                 </div>
@@ -2349,18 +2645,25 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           };
 
           return (
-            <section 
-              key={`content-block-${blockIndex}`} 
-              className="py-10 lg:py-16" 
+            <section
+              key={`content-block-${blockIndex}`}
+              className="py-16 lg:py-24"
               style={{ backgroundColor: sbg(`contentBlock-${blockIndex}`, c.bodyBg) }}
             >
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className={`grid lg:grid-cols-2 gap-8 lg:gap-12 items-center ${isMediaLeft ? '' : 'lg:grid-flow-dense'}`}>
-                  {/* Media */}
-                  <div className={isMediaLeft ? '' : 'lg:col-start-2'}>
-                    {renderBlockMedia()}
+                <div className={`grid lg:grid-cols-2 gap-10 lg:gap-16 items-center ${isMediaLeft ? '' : 'lg:grid-flow-dense'}`}>
+                  {/* Media — aura bloom behind, so imagery reads as lit rather than pasted on */}
+                  <div className={`lt-reveal relative ${isMediaLeft ? '' : 'lg:col-start-2'}`}>
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -inset-5 rounded-[40px] blur-2xl"
+                      style={{ background: `radial-gradient(circle at 50% 50%, ${hexToRgba(c.accent, 0.26)} 0%, transparent 70%)` }}
+                    />
+                    <div className="lt-zoom relative overflow-hidden rounded-[26px]" style={{ border: `1px solid ${hairline}`, boxShadow: cardShadow }}>
+                      {renderBlockMedia()}
+                    </div>
                   </div>
-                  
+
                   {/* Text */}
                   <div className={isMediaLeft ? '' : 'lg:col-start-1 lg:row-start-1'}>
                     {renderBlockText()}
@@ -2424,15 +2727,14 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
       case 'faq':
         return t.faq?.enabled && t.faq.items.length > 0 && (
-          <section className="py-8 lg:py-14" style={{ backgroundColor: sbg('faq', c.bodyBg) }}>
+          <section className="py-16 lg:py-24" style={{ backgroundColor: sbg('faq', c.bodyBg) }}>
             <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="text-center mb-6 lg:mb-8">
-                <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 mb-3">{t.faq.title}</h2>
-                {t.faq.subtitle && <p className="text-gray-500 font-body">{t.faq.subtitle}</p>}
-              </div>
+              <SectionHeading title={t.faq.title} subtitle={t.faq.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-12" />
               <div className="space-y-3">
                 {t.faq.items.map((item, i) => (
-                  <FaqItem key={i} item={item} primaryColor={c.primary} />
+                  <div key={i} className="lt-reveal" style={{ ["--lt-i" as string]: i }}>
+                    <FaqItem item={item} primaryColor={c.accent} ink={ink} muted={muted} surface={surface} hairline={hairline} />
+                  </div>
                 ))}
               </div>
             </div>
@@ -2441,47 +2743,60 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
       case 'footer':
         return t.footer.enabled && (
-      <footer style={{ backgroundColor: sbg('footer', c.darkBg) }}>
-        {/* CTA Banner */}
-        <div className="py-8 lg:py-14 text-center">
+      <footer
+        className="relative overflow-hidden"
+        style={t.sectionBg?.['footer'] ? { backgroundColor: t.sectionBg['footer'] } : deepStage}
+      >
+        <span className="lt-grain-layer" aria-hidden="true" />
+        <span
+          aria-hidden="true"
+          className="lt-aura pointer-events-none absolute left-1/2 top-0 h-[420px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
+          style={{ background: `radial-gradient(circle, ${hexToRgba(c.accent, 0.32)} 0%, transparent 70%)` }}
+        />
+        {/* Closing CTA */}
+        <div className="relative py-20 lg:py-28 text-center">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
+            <div className="lt-reveal mb-6 flex justify-center"><RitualRule color={c.accent} /></div>
+            <h2
+              className="lt-reveal font-display text-[clamp(2rem,4.6vw,3.6rem)] font-bold leading-[1.06] tracking-[-0.025em] text-white"
+              style={{ ["--lt-i" as string]: 1 }}
+            >
               {t.footer.cta.title}
             </h2>
-            <p className="text-lg text-gray-300 font-body mb-8 max-w-2xl mx-auto">
-              {t.footer.cta.subtitle}
-            </p>
-            {(t.footer.cta.showCtaButton ?? true) && (
-              t.footer.cta.ctaButtonAction === "url" ? (
-                <a
-                  href={resolveLink(t.footer.cta.ctaButtonLink)}
-                  className="inline-flex items-center px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
-                  style={{ backgroundColor: c.primary }}
-                >
-                  {t.footer.cta.ctaButtonText}
-                  <svg className="ml-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                </a>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setInvitationDialogOpen(true)}
-                  className="inline-flex items-center px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
-                  style={{ backgroundColor: c.primary }}
-                >
-                  {t.footer.cta.ctaButtonText}
-                  <svg className="ml-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                </button>
-              )
+            {hasContent(t.footer.cta.subtitle) && (
+              <p
+                className="lt-reveal font-body mx-auto mt-5 max-w-2xl text-base sm:text-lg leading-relaxed text-white/70"
+                style={{ ["--lt-i" as string]: 2 }}
+              >
+                {t.footer.cta.subtitle}
+              </p>
+            )}
+            {(t.footer.cta.showCtaButton ?? true) && hasContent(t.footer.cta.ctaButtonText) && (
+              <div className="lt-reveal mt-10" style={{ ["--lt-i" as string]: 3 }}>
+                {t.footer.cta.ctaButtonAction === "url" ? (
+                  <a href={resolveLink(t.footer.cta.ctaButtonLink)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                    <span className="lt-cta-sheen" aria-hidden="true" />
+                    {t.footer.cta.ctaButtonText}
+                    <CtaArrow />
+                  </a>
+                ) : (
+                  <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                    <span className="lt-cta-sheen" aria-hidden="true" />
+                    {t.footer.cta.ctaButtonText}
+                    <CtaArrow />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
         {/* Bottom Bar */}
-        <div className="border-t border-white/10 py-6">
+        <div className="relative border-t border-white/10 py-7">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-gray-400 font-body">{t.footer.copyright}</p>
-            <div className="flex gap-6">
+            <p className="font-body text-sm text-white/45">{t.footer.copyright}</p>
+            <div className="flex flex-wrap justify-center gap-x-7 gap-y-2">
               {t.footer.links.map((link, i) => (
-                <a key={i} href={link.url} className="text-sm text-gray-400 hover:text-white font-body transition-colors">
+                <a key={i} href={link.url} className="lt-focus font-body text-sm text-white/45 transition-colors hover:text-white">
                   {link.label}
                 </a>
               ))}
@@ -2508,19 +2823,65 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       // (see the Marquee component below), so this wrapper doesn't need
       // vertical overflow visible — overflow-hidden on both axes avoids the
       // promotion entirely.
+      ref={rootRef}
       className="min-h-screen font-sans w-full max-w-full overflow-hidden"
       style={{ backgroundColor: c.bodyBg, ...(t.fontFamily ? { fontFamily: t.fontFamily } : {}) }}
     >
       {/* Inject marquee animation + fonts. A chosen template font overrides the
           default body (and heading) fonts across the whole page. */}
       <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Marcellus&family=Playfair+Display:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-33.333%); } }
         @keyframes floating-cta-ring { 0% { transform: scale(0.85); opacity: 0.8; } 70% { transform: scale(1.25); opacity: 0; } 100% { opacity: 0; } }
         @keyframes floating-cta-bob { 0% { transform: translateY(0); } 50% { transform: translateY(-3px); } 100% { transform: translateY(0); } }
+        @keyframes lt-aura { 0%, 100% { transform: scale(1) translate3d(0,0,0); opacity: .7; } 50% { transform: scale(1.1) translate3d(0,-2%,0); opacity: 1; } }
+        @keyframes lt-rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+        @keyframes lt-sheen { 0% { transform: translateX(-130%) skewX(-18deg); } 55%, 100% { transform: translateX(240%) skewX(-18deg); } }
         .animate-marquee { animation: marquee 20s linear infinite; }
         .font-display { font-family: ${t.fontFamily ? t.fontFamily : "'Marcellus', serif"}; }
         .font-body { font-family: ${t.fontFamily ? t.fontFamily : "'Inter', sans-serif"}; }
+
+        /* Scroll choreography. The hidden state only applies once JS has added
+           .lt-anim to the root, so with JS disabled (or in the admin editor)
+           every element stays visible and nothing can get stranded at opacity 0. */
+        .lt-anim .lt-reveal { opacity: 0; transform: translateY(26px); will-change: opacity, transform; }
+        .lt-anim .lt-reveal.is-in {
+          opacity: 1; transform: none;
+          transition: opacity .8s cubic-bezier(.16,1,.3,1), transform .8s cubic-bezier(.16,1,.3,1);
+          transition-delay: calc(var(--lt-i, 0) * 85ms);
+        }
+        .lt-anim .lt-rise { animation: lt-rise .95s cubic-bezier(.16,1,.3,1) both; animation-delay: calc(var(--lt-i, 0) * 90ms); }
+
+        .lt-aura { animation: lt-aura 9s ease-in-out infinite; }
+        .lt-grain-layer {
+          position: absolute; inset: 0; pointer-events: none; opacity: .35; mix-blend-mode: soft-light;
+          background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='.55'/></svg>");
+        }
+
+        .lt-card { transition: transform .5s cubic-bezier(.16,1,.3,1), box-shadow .5s ease, border-color .5s ease; }
+        .lt-card:hover { transform: translateY(-6px); }
+
+        .lt-cta { overflow: hidden; isolation: isolate; transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s ease; }
+        .lt-cta:hover { transform: translateY(-2px); }
+        .lt-cta-sheen {
+          position: absolute; top: 0; bottom: 0; width: 38%; pointer-events: none;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
+          transform: translateX(-130%) skewX(-18deg);
+        }
+        .lt-cta:hover .lt-cta-sheen { animation: lt-sheen 1.1s ease-out; }
+
+        .lt-zoom img, .lt-zoom video { transition: transform .8s cubic-bezier(.16,1,.3,1); }
+        .lt-zoom:hover img, .lt-zoom:hover video { transform: scale(1.06); }
+
+        .lt-focus:focus-visible { outline: 2px solid ${c.accent}; outline-offset: 3px; }
+
+        @media (prefers-reduced-motion: reduce) {
+          .lt-anim .lt-reveal, .lt-anim .lt-reveal.is-in { opacity: 1 !important; transform: none !important; transition: none !important; }
+          .lt-anim .lt-rise { animation: none !important; }
+          .lt-aura, .animate-marquee { animation: none !important; }
+          .lt-card:hover, .lt-cta:hover { transform: none !important; }
+          .lt-zoom:hover img, .lt-zoom:hover video { transform: none !important; }
+        }
       `}} />
 
       {sectionOrder.map((sectionKey, index) => {
