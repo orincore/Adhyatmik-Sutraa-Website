@@ -1126,6 +1126,29 @@ export function TemplateEditor({
           />
         </div>
         <div>
+          <Label className="text-xs text-gray-500">Layout</Label>
+          <select
+            value={data.hero.layout ?? "boxed"}
+            onChange={(e) => update("hero", { layout: e.target.value as "boxed" | "fullBleed" })}
+            className="w-full h-8 rounded-md border border-gray-200 bg-white px-2 text-xs mt-1"
+          >
+            <option value="boxed">Boxed (centered content)</option>
+            <option value="fullBleed">Full-Bleed (full-viewport, bottom-anchored image)</option>
+          </select>
+        </div>
+        {data.hero.layout === "fullBleed" && (
+          <>
+            <div>
+              <Label className="text-xs text-gray-500">Scroll Indicator Text</Label>
+              <Input value={data.hero.scrollIndicatorText ?? ''} onChange={(e) => update("hero", { scrollIndicatorText: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" placeholder="Scroll down" />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">Scroll Indicator Target</Label>
+              <Input value={data.hero.scrollIndicatorTarget ?? ''} onChange={(e) => update("hero", { scrollIndicatorTarget: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" placeholder="#stats" />
+            </div>
+          </>
+        )}
+        <div>
           <Label className="text-xs text-gray-500">Badge Text</Label>
           <Input value={data.hero.badge} onChange={(e) => update("hero", { badge: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
         </div>
@@ -1366,6 +1389,30 @@ export function TemplateEditor({
           <Label className="text-xs text-gray-500">Subtitle</Label>
           <Textarea value={data.why.subtitle} onChange={(e) => update("why", { subtitle: e.target.value })} rows={2} className="text-xs mt-1 bg-gray-50 border-gray-200" />
         </div>
+        <div>
+          <Label className="text-xs text-gray-500">Layout</Label>
+          <select
+            value={data.why.layoutVariant ?? "cards"}
+            onChange={(e) => update("why", { layoutVariant: e.target.value as "cards" | "splitAlternating" })}
+            className="w-full h-8 rounded-md border border-gray-200 bg-white px-2 text-xs mt-1"
+          >
+            <option value="cards">Card Grid</option>
+            <option value="splitAlternating">Image Grid + Heading (split)</option>
+          </select>
+        </div>
+        {data.why.layoutVariant === "splitAlternating" && (
+          <div>
+            <Label className="text-xs text-gray-500">Image Side</Label>
+            <select
+              value={data.why.imageSide ?? "left"}
+              onChange={(e) => update("why", { imageSide: e.target.value as "left" | "right" })}
+              className="w-full h-8 rounded-md border border-gray-200 bg-white px-2 text-xs mt-1"
+            >
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+        )}
         {data.why.points.map((point, i) => {
           const pointImageKey = mediaKey("why", "points", i, "image");
           return (
@@ -1457,10 +1504,73 @@ export function TemplateEditor({
         </div>
       </Section>
     ),
+    guidesRail: (
+      <Section
+        key="guidesRail"
+        title="People Rail"
+        icon={<Users className="h-4 w-4" />}
+        {...sectionProps('guidesRail')}
+      >
+        <SectionBgField sectionKey="guidesRail" value={data.sectionBg?.['guidesRail'] || ''} onChange={updateSectionBg} />
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-gray-600">Show people rail</Label>
+          <Switch
+            checked={data.guidesRail?.visible ?? false}
+            onCheckedChange={(v) => update("guidesRail", { visible: v })}
+          />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Title</Label>
+          <Input value={data.guidesRail?.title ?? ''} onChange={(e) => update("guidesRail", { title: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Subtitle</Label>
+          <Input value={data.guidesRail?.subtitle ?? ''} onChange={(e) => update("guidesRail", { subtitle: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        {(data.guidesRail?.items ?? []).map((item, i) => {
+          const items = data.guidesRail?.items ?? [];
+          const itemKey = mediaKey("guidesRail", "items", i, "image");
+          return (
+          <div key={i} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold text-gray-400 uppercase">Person {i + 1}</span>
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-red-500" onClick={() => {
+                clearMediaSettings(itemKey);
+                update("guidesRail", { items: items.filter((_, j) => j !== i) });
+              }}>
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+            <ImageField
+              label="Photo"
+              value={item.image}
+              onChange={(v) => {
+                const arr = [...items]; arr[i] = { ...arr[i], image: v }; update("guidesRail", { items: arr });
+              }}
+              settings={mediaSettings[itemKey]}
+              onSettingsChange={(value) => handleMediaSettingsChange(itemKey, value)}
+              onClearSettings={() => clearMediaSettings(itemKey)}
+            />
+            <Input value={item.name} onChange={(e) => {
+              const arr = [...items]; arr[i] = { ...arr[i], name: e.target.value }; update("guidesRail", { items: arr });
+            }} className="h-8 text-xs bg-white border-gray-200" placeholder="Name" />
+            <Input value={item.role} onChange={(e) => {
+              const arr = [...items]; arr[i] = { ...arr[i], role: e.target.value }; update("guidesRail", { items: arr });
+            }} className="h-8 text-xs bg-white border-gray-200" placeholder="Role" />
+            <Input value={item.link ?? ''} onChange={(e) => {
+              const arr = [...items]; arr[i] = { ...arr[i], link: e.target.value }; update("guidesRail", { items: arr });
+            }} className="h-8 text-xs bg-white border-gray-200" placeholder="Link (optional)" />
+          </div>
+        )})}
+        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => update("guidesRail", { items: [...(data.guidesRail?.items ?? []), { name: "", role: "", image: "", link: "" }] })}>
+          <Plus className="h-3 w-3 mr-1" /> Add Person
+        </Button>
+      </Section>
+    ),
     logos: (
-      <Section 
+      <Section
         key="logos"
-        title="Logo Bar" 
+        title="Logo Bar"
         icon={<Award className="h-4 w-4" />}
         {...sectionProps('logos')}
       >
@@ -1581,19 +1691,40 @@ export function TemplateEditor({
           <Label className="text-xs text-gray-500">Subtitle</Label>
           <Input value={data.stats.subtitle} onChange={(e) => update("stats", { subtitle: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
         </div>
+        <div>
+          <Label className="text-xs text-gray-500">Card Style</Label>
+          <select
+            value={data.stats.cardStyle ?? "glass"}
+            onChange={(e) => update("stats", { cardStyle: e.target.value as "glass" | "lightOnDark" })}
+            className="w-full h-8 rounded-md border border-gray-200 bg-white px-2 text-xs mt-1"
+          >
+            <option value="glass">Glass Cards</option>
+            <option value="lightOnDark">Trust Rail (light card, icon)</option>
+          </select>
+        </div>
         {data.stats.stats.map((stat, i) => (
-          <div key={i} className="flex gap-1">
-            <Input value={stat.value} onChange={(e) => {
-              const arr = [...data.stats.stats]; arr[i] = { ...arr[i], value: e.target.value }; update("stats", { stats: arr });
-            }} className="h-8 text-xs bg-gray-50 border-gray-200 w-24" placeholder="Value" />
-            <Input value={stat.label} onChange={(e) => {
-              const arr = [...data.stats.stats]; arr[i] = { ...arr[i], label: e.target.value }; update("stats", { stats: arr });
-            }} className="h-8 text-xs bg-gray-50 border-gray-200 flex-1" placeholder="Label" />
-            <Button variant="ghost" size="sm" className="h-8 px-2 text-red-500" onClick={() => {
-              update("stats", { stats: data.stats.stats.filter((_, j) => j !== i) });
-            }}>
-              <Trash2 className="h-3 w-3" />
-            </Button>
+          <div key={i} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
+            {data.stats.cardStyle === "lightOnDark" && (
+              <IconPicker
+                value={stat.icon ?? ""}
+                onChange={(name) => {
+                  const arr = [...data.stats.stats]; arr[i] = { ...arr[i], icon: name }; update("stats", { stats: arr });
+                }}
+              />
+            )}
+            <div className="flex gap-1">
+              <Input value={stat.value} onChange={(e) => {
+                const arr = [...data.stats.stats]; arr[i] = { ...arr[i], value: e.target.value }; update("stats", { stats: arr });
+              }} className="h-8 text-xs bg-white border-gray-200 w-24" placeholder="Value" />
+              <Input value={stat.label} onChange={(e) => {
+                const arr = [...data.stats.stats]; arr[i] = { ...arr[i], label: e.target.value }; update("stats", { stats: arr });
+              }} className="h-8 text-xs bg-white border-gray-200 flex-1" placeholder="Label" />
+              <Button variant="ghost" size="sm" className="h-8 px-2 text-red-500" onClick={() => {
+                update("stats", { stats: data.stats.stats.filter((_, j) => j !== i) });
+              }}>
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
         ))}
         <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => update("stats", { stats: [...data.stats.stats, { value: "", label: "" }] })}>
@@ -1628,10 +1759,67 @@ export function TemplateEditor({
         />
       </Section>
     ),
+    formats: (
+      <Section
+        key="formats"
+        title="Format Carousel"
+        icon={<ImageIcon className="h-4 w-4" />}
+        {...sectionProps('formats')}
+      >
+        <SectionBgField sectionKey="formats" value={data.sectionBg?.['formats'] || ''} onChange={updateSectionBg} />
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-gray-600">Show format carousel</Label>
+          <Switch
+            checked={data.formats?.visible ?? false}
+            onCheckedChange={(v) => update("formats", { visible: v })}
+          />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Title</Label>
+          <Input value={data.formats?.title ?? ''} onChange={(e) => update("formats", { title: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Subtitle</Label>
+          <Input value={data.formats?.subtitle ?? ''} onChange={(e) => update("formats", { subtitle: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        {(data.formats?.slides ?? []).map((slide, i) => {
+          const slides = data.formats?.slides ?? [];
+          const slideKey = mediaKey("formats", "slides", i, "image");
+          return (
+          <div key={i} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold text-gray-400 uppercase">Slide {i + 1}</span>
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-red-500" onClick={() => {
+                clearMediaSettings(slideKey);
+                update("formats", { slides: slides.filter((_, j) => j !== i) });
+              }}>
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+            <ImageField
+              label="Image"
+              value={slide.image}
+              onChange={(v) => {
+                const arr = [...slides]; arr[i] = { ...arr[i], image: v }; update("formats", { slides: arr });
+              }}
+              settings={mediaSettings[slideKey]}
+              onSettingsChange={(value) => handleMediaSettingsChange(slideKey, value)}
+              onClearSettings={() => clearMediaSettings(slideKey)}
+            />
+            <Input value={slide.label ?? ''} onChange={(e) => {
+              const arr = [...slides]; arr[i] = { ...arr[i], label: e.target.value }; update("formats", { slides: arr });
+            }} className="h-8 text-xs bg-white border-gray-200" placeholder="Label (optional)" />
+          </div>
+        )})}
+        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => update("formats", { slides: [...(data.formats?.slides ?? []), { image: "", label: "" }] })}>
+          <Plus className="h-3 w-3 mr-1" /> Add Slide
+        </Button>
+      </Section>
+    ),
     testimonials: (
-      <Section 
+      <Section
         key="testimonials"
-        title="Testimonials" 
+        title="Testimonials"
         icon={<MessageSquare className="h-4 w-4" />}
         {...sectionProps('testimonials')}
       >
@@ -1650,6 +1838,17 @@ export function TemplateEditor({
         <div>
           <Label className="text-xs text-gray-500">Subtitle</Label>
           <Input value={data.testimonials.subtitle} onChange={(e) => update("testimonials", { subtitle: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Display Style</Label>
+          <select
+            value={data.testimonials.displayMode ?? "grid"}
+            onChange={(e) => update("testimonials", { displayMode: e.target.value as "grid" | "marquee" })}
+            className="w-full h-8 rounded-md border border-gray-200 bg-white px-2 text-xs mt-1"
+          >
+            <option value="grid">Grid</option>
+            <option value="marquee">Auto-scrolling Marquee</option>
+          </select>
         </div>
         {data.testimonials.items.map((item, i) => {
           const testimonialKey = mediaKey("testimonials", "items", i, "image");
@@ -2399,10 +2598,43 @@ export function TemplateEditor({
     );
       })()
     ),
+    appBanner: (
+      <Section
+        key="appBanner"
+        title="App Banner"
+        icon={<MousePointerClick className="h-4 w-4" />}
+        {...sectionProps('appBanner')}
+      >
+        <SectionBgField sectionKey="appBanner" value={data.sectionBg?.['appBanner'] || ''} onChange={updateSectionBg} />
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-gray-600">Show banner</Label>
+          <Switch
+            checked={data.appBanner?.visible ?? false}
+            onCheckedChange={(v) => update("appBanner", { visible: v })}
+          />
+        </div>
+        <ImageField
+          label="Banner Image"
+          value={data.appBanner?.image ?? ''}
+          onChange={(v) => update("appBanner", { image: v })}
+          settings={mediaSettings[mediaKey("appBanner", "image")]}
+          onSettingsChange={(value) => handleMediaSettingsChange(mediaKey("appBanner", "image"), value)}
+          onClearSettings={() => clearMediaSettings(mediaKey("appBanner", "image"))}
+        />
+        <div>
+          <Label className="text-xs text-gray-500">Link</Label>
+          <Input value={data.appBanner?.link ?? ''} onChange={(e) => update("appBanner", { link: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" placeholder="https://example.com or #anchor" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Alt Text</Label>
+          <Input value={data.appBanner?.alt ?? ''} onChange={(e) => update("appBanner", { alt: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+      </Section>
+    ),
     footer: (
-      <Section 
+      <Section
         key="footer"
-        title="Footer" 
+        title="Footer"
         icon={<Globe className="h-4 w-4" />}
         {...sectionProps('footer')}
       >
@@ -2472,6 +2704,138 @@ export function TemplateEditor({
           <Button variant="outline" size="sm" className="h-7 text-xs mt-1" onClick={() => update("footer", { links: [...data.footer.links, { label: "", url: "#" }] })}>
             <Plus className="h-3 w-3 mr-1" /> Add Link
           </Button>
+        </div>
+        <ImageField
+          label="Footer Logo (optional)"
+          value={data.footer.logo ?? ''}
+          onChange={(v) => update("footer", { logo: v })}
+          settings={mediaSettings[mediaKey("footer", "logo")]}
+          onSettingsChange={(value) => handleMediaSettingsChange(mediaKey("footer", "logo"), value)}
+          onClearSettings={() => clearMediaSettings(mediaKey("footer", "logo"))}
+        />
+        <div>
+          <Label className="text-xs text-gray-500">Address</Label>
+          <Textarea value={data.footer.address ?? ''} onChange={(e) => update("footer", { address: e.target.value })} rows={3} className="text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Social Links</Label>
+          {(data.footer.socialLinks ?? []).map((social, i) => {
+            const links = data.footer.socialLinks ?? [];
+            return (
+            <div key={i} className="flex gap-1 mt-1">
+              <select
+                value={social.icon}
+                onChange={(e) => {
+                  const arr = [...links]; arr[i] = { ...arr[i], icon: e.target.value as typeof social.icon }; update("footer", { socialLinks: arr });
+                }}
+                className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs w-28"
+              >
+                <option value="instagram">Instagram</option>
+                <option value="facebook">Facebook</option>
+                <option value="youtube">YouTube</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="x">X</option>
+                <option value="whatsapp">WhatsApp</option>
+              </select>
+              <Input value={social.url} onChange={(e) => {
+                const arr = [...links]; arr[i] = { ...arr[i], url: e.target.value }; update("footer", { socialLinks: arr });
+              }} className="h-8 text-xs bg-gray-50 border-gray-200 flex-1" placeholder="URL" />
+              <Button variant="ghost" size="sm" className="h-8 px-2 text-red-500" onClick={() => {
+                update("footer", { socialLinks: links.filter((_, j) => j !== i) });
+              }}>
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          )})}
+          <Button variant="outline" size="sm" className="h-7 text-xs mt-1" onClick={() => update("footer", { socialLinks: [...(data.footer.socialLinks ?? []), { icon: "instagram" as const, url: "" }] })}>
+            <Plus className="h-3 w-3 mr-1" /> Add Social Link
+          </Button>
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Link Columns</Label>
+          {(data.footer.linkColumns ?? []).map((col, i) => {
+            const columns = data.footer.linkColumns ?? [];
+            return (
+            <div key={i} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50 mt-1">
+              <div className="flex items-center gap-1">
+                <Input value={col.heading} onChange={(e) => {
+                  const arr = [...columns]; arr[i] = { ...arr[i], heading: e.target.value }; update("footer", { linkColumns: arr });
+                }} className="h-8 text-xs bg-white border-gray-200 flex-1" placeholder="Column heading" />
+                <Button variant="ghost" size="sm" className="h-8 px-2 text-red-500" onClick={() => {
+                  update("footer", { linkColumns: columns.filter((_, j) => j !== i) });
+                }}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+              {col.links.map((link, j) => (
+                <div key={j} className="flex gap-1">
+                  <Input value={link.label} onChange={(e) => {
+                    const arr = [...columns]; const linkArr = [...arr[i].links]; linkArr[j] = { ...linkArr[j], label: e.target.value }; arr[i] = { ...arr[i], links: linkArr }; update("footer", { linkColumns: arr });
+                  }} className="h-8 text-xs bg-white border-gray-200 w-24" placeholder="Label" />
+                  <Input value={link.url} onChange={(e) => {
+                    const arr = [...columns]; const linkArr = [...arr[i].links]; linkArr[j] = { ...linkArr[j], url: e.target.value }; arr[i] = { ...arr[i], links: linkArr }; update("footer", { linkColumns: arr });
+                  }} className="h-8 text-xs bg-white border-gray-200 flex-1" placeholder="URL" />
+                  <Button variant="ghost" size="sm" className="h-8 px-2 text-red-500" onClick={() => {
+                    const arr = [...columns]; arr[i] = { ...arr[i], links: arr[i].links.filter((_, k) => k !== j) }; update("footer", { linkColumns: arr });
+                  }}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => {
+                const arr = [...columns]; arr[i] = { ...arr[i], links: [...arr[i].links, { label: "", url: "#" }] }; update("footer", { linkColumns: arr });
+              }}>
+                <Plus className="h-3 w-3 mr-1" /> Add Link
+              </Button>
+            </div>
+          )})}
+          <Button variant="outline" size="sm" className="h-7 text-xs mt-1" onClick={() => update("footer", { linkColumns: [...(data.footer.linkColumns ?? []), { heading: "", links: [] }] })}>
+            <Plus className="h-3 w-3 mr-1" /> Add Column
+          </Button>
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Popular Links (SEO tag cloud)</Label>
+          {(data.footer.popularLinks ?? []).map((link, i) => {
+            const links = data.footer.popularLinks ?? [];
+            return (
+            <div key={i} className="flex gap-1 mt-1">
+              <Input value={link.label} onChange={(e) => {
+                const arr = [...links]; arr[i] = { ...arr[i], label: e.target.value }; update("footer", { popularLinks: arr });
+              }} className="h-8 text-xs bg-gray-50 border-gray-200 w-28" placeholder="Label" />
+              <Input value={link.url} onChange={(e) => {
+                const arr = [...links]; arr[i] = { ...arr[i], url: e.target.value }; update("footer", { popularLinks: arr });
+              }} className="h-8 text-xs bg-gray-50 border-gray-200 flex-1" placeholder="URL" />
+              <Button variant="ghost" size="sm" className="h-8 px-2 text-red-500" onClick={() => {
+                update("footer", { popularLinks: links.filter((_, j) => j !== i) });
+              }}>
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          )})}
+          <Button variant="outline" size="sm" className="h-7 text-xs mt-1" onClick={() => update("footer", { popularLinks: [...(data.footer.popularLinks ?? []), { label: "", url: "#" }] })}>
+            <Plus className="h-3 w-3 mr-1" /> Add Popular Link
+          </Button>
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">App Download</Label>
+          <Input
+            value={data.footer.appDownload?.text ?? ''}
+            onChange={(e) => update("footer", { appDownload: { ...(data.footer.appDownload ?? { text: "" }), text: e.target.value } })}
+            className="h-8 text-xs mt-1 bg-gray-50 border-gray-200"
+            placeholder="Download our app"
+          />
+          <Input
+            value={data.footer.appDownload?.iosUrl ?? ''}
+            onChange={(e) => update("footer", { appDownload: { ...(data.footer.appDownload ?? { text: "" }), iosUrl: e.target.value } })}
+            className="h-8 text-xs mt-1 bg-gray-50 border-gray-200"
+            placeholder="App Store URL"
+          />
+          <Input
+            value={data.footer.appDownload?.androidUrl ?? ''}
+            onChange={(e) => update("footer", { appDownload: { ...(data.footer.appDownload ?? { text: "" }), androidUrl: e.target.value } })}
+            className="h-8 text-xs mt-1 bg-gray-50 border-gray-200"
+            placeholder="Google Play URL"
+          />
         </div>
       </Section>
     ),

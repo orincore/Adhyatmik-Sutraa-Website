@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { EditorContent } from "@tiptap/react";
-import type { LandingTemplateData, RichBlockEntry } from "@/lib/template-types";
+import type { LandingTemplateData, RichBlockEntry, TestimonialItem } from "@/lib/template-types";
 import {
   DEFAULT_MEDIA_SETTINGS,
   normalizeTemplateData,
@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CalendarDays, Clock3, MapPin, CheckCircle2, ChevronLeft, ChevronRight, Zap, Radio, FlaskConical, BookOpen, Star, Heart, Leaf, Sun, Moon, Sparkles, Target, Trophy, Users, Brain, Lightbulb, Shield, Flame, Gem, Music, Globe, Camera, Smile, Coffee, Rocket, Award, MessageSquare, Lock, GripVertical, ArrowUp, ArrowDown, Eye, EyeOff, Settings2, Plus, Copy, Trash2 } from "lucide-react";
+import { CalendarDays, Clock3, MapPin, CheckCircle2, ChevronLeft, ChevronRight, Zap, Radio, FlaskConical, BookOpen, Star, Heart, Leaf, Sun, Moon, Sparkles, Target, Trophy, Users, Brain, Lightbulb, Shield, Flame, Gem, Music, Globe, Camera, Smile, Coffee, Rocket, Award, MessageSquare, Lock, GripVertical, ArrowUp, ArrowDown, Eye, EyeOff, Settings2, Plus, Copy, Trash2, Instagram, Facebook, Youtube, Linkedin, Twitter, MessageCircle } from "lucide-react";
 import { DynamicPageRenderer } from "@/components/storefront/dynamic-page-renderer";
 
 // Icon resolver for why-section cards
@@ -38,6 +38,16 @@ function ProgramIcon({ name, className, style }: { name?: string; className?: st
   const Icon = name ? (ICON_MAP[name] ?? Sparkles) : Sparkles;
   return <Icon className={className} style={style} />;
 }
+
+// Footer social row — lucide has no dedicated WhatsApp glyph, MessageCircle stands in.
+const SOCIAL_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  instagram: Instagram,
+  facebook: Facebook,
+  youtube: Youtube,
+  linkedin: Linkedin,
+  x: Twitter,
+  whatsapp: MessageCircle,
+};
 
 // ---------------------------------------------------------------------------
 // Helper: hex to rgba
@@ -1686,6 +1696,22 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
   const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
 
+  // "Format Carousel" section — single rotating image with dot pagination.
+  // State lives at the top level (not inside renderSection) so it obeys the
+  // rules of hooks regardless of section order.
+  const formatsSlides = t.formats?.slides || [];
+  const [currentFormatsSlide, setCurrentFormatsSlide] = useState(0);
+  useEffect(() => {
+    setCurrentFormatsSlide((prev) => (formatsSlides.length === 0 ? 0 : Math.min(prev, formatsSlides.length - 1)));
+  }, [formatsSlides.length]);
+  useEffect(() => {
+    if (formatsSlides.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentFormatsSlide((prev) => (prev + 1) % formatsSlides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [formatsSlides.length]);
+
   useEffect(() => {
     setCurrentHeroSlide((prev) => {
       if (heroSlides.length === 0) return 0;
@@ -1712,11 +1738,11 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
     });
   };
 
-  const renderHeroCarousel = () => {
+  const renderHeroCarousel = (fitClassName: string = "object-cover object-top") => {
     if (heroSlides.length === 0) {
       return renderMedia(t.hero.heroImage, mediaKey("hero", "heroImage"), {
         wrapperClassName: "absolute inset-0 w-full h-full",
-        className: "w-full h-full object-cover object-top",
+        className: `w-full h-full ${fitClassName}`,
         alt: "Hero",
       });
     }
@@ -1737,7 +1763,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             >
               {renderMedia(slide.url, mediaKey("hero", "heroMedia", index, "url"), {
                 wrapperClassName: "absolute inset-0 w-full h-full",
-                className: "w-full h-full object-cover object-top",
+                className: `w-full h-full ${fitClassName}`,
                 alt: slide.label || `Hero slide ${index + 1}`,
                 isActive: isSlideActive,
               })}
@@ -1901,12 +1927,91 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
   const renderSection = (sectionKey: string) => {
     if (isRichBlockKey(sectionKey)) return renderRichBlock(sectionKey);
     switch (sectionKey) {
-      case 'hero':
+      case 'hero': {
+        if (!t.hero.visible) return null;
+        const heroBg = t.sectionBg?.['hero'] ? { backgroundColor: t.sectionBg['hero'] } : stage;
+
+        if (t.hero.layout === "fullBleed") {
+          return (
+            <section
+              className="relative flex min-h-[100svh] flex-col overflow-hidden px-4 pt-14 sm:px-6 sm:pt-20 lg:px-8"
+              style={heroBg}
+            >
+              <span className="lt-grain-layer" aria-hidden="true" />
+              <span
+                aria-hidden="true"
+                className="lt-aura pointer-events-none absolute left-1/2 top-[10%] -translate-x-1/2 -translate-y-1/2 h-[520px] w-[520px] sm:h-[760px] sm:w-[760px] rounded-full blur-3xl"
+                style={{ background: `radial-gradient(circle, ${hexToRgba(c.accent, 0.4)} 0%, ${hexToRgba(c.primary, 0.22)} 45%, transparent 70%)` }}
+              />
+
+              <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-shrink-0 flex-col items-center gap-5 text-center">
+                {hasContent(t.hero.badge) && (
+                  <span
+                    className="lt-rise inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.22em] backdrop-blur-sm"
+                    style={{ ["--lt-i" as string]: 0, color: "#fff", backgroundColor: "rgba(255,255,255,0.10)", border: `1px solid ${hexToRgba(c.accent, 0.45)}` }}
+                  >
+                    {t.hero.badge}
+                  </span>
+                )}
+                <h1
+                  className="lt-rise font-display font-bold text-white text-[clamp(2rem,5.4vw,3.6rem)] leading-[1.06] tracking-[-0.02em]"
+                  style={{ ["--lt-i" as string]: 1 }}
+                >
+                  {t.hero.headline}{" "}
+                  {hasContent(t.hero.highlightedWord) && (
+                    <span className="relative inline-block whitespace-nowrap">
+                      <span style={{ color: c.accent, textShadow: `0 0 38px ${hexToRgba(c.accent, 0.5)}` }}>
+                        {t.hero.highlightedWord}
+                      </span>
+                    </span>
+                  )}
+                </h1>
+                {hasContent(t.hero.subheadline) && (
+                  <p className="lt-rise font-body max-w-2xl text-base sm:text-lg leading-relaxed text-white/75" style={{ ["--lt-i" as string]: 2 }}>
+                    {t.hero.subheadline}
+                  </p>
+                )}
+                <div className="lt-rise" style={{ ["--lt-i" as string]: 3 }}>
+                  {t.hero.ctaButtonAction === "url" ? (
+                    <a href={resolveLink(t.hero.ctaButtonLink)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                      <span className="lt-cta-sheen" aria-hidden="true" />
+                      {hasContent(t.hero.ctaButtonText) ? t.hero.ctaButtonText : "Get Started"}
+                      <CtaArrow />
+                    </a>
+                  ) : (
+                    <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                      <span className="lt-cta-sheen" aria-hidden="true" />
+                      {hasContent(t.hero.ctaButtonText) ? t.hero.ctaButtonText : "Get Started"}
+                      <CtaArrow />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {heroSlides.length > 0 && (
+                <div className="relative z-0 mt-6 min-h-0 flex-1">
+                  <div className="absolute inset-0">{renderHeroCarousel("object-contain object-bottom")}</div>
+                  {hasContent(t.hero.scrollIndicatorText) && (
+                    <a
+                      href={t.hero.scrollIndicatorTarget || "#"}
+                      className="animate-bounce absolute inset-x-0 bottom-4 z-10 flex flex-col items-center gap-1 text-center text-white/90"
+                    >
+                      <span className="font-body text-xs sm:text-sm">{t.hero.scrollIndicatorText}</span>
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </a>
+                  )}
+                </div>
+              )}
+            </section>
+          );
+        }
+
         return (
-          t.hero.visible && (
             <section
               className="relative overflow-hidden px-4 sm:px-6 lg:px-8 pt-14 pb-16 sm:pt-20 sm:pb-24"
-              style={t.sectionBg?.['hero'] ? { backgroundColor: t.sectionBg['hero'] } : stage}
+              style={heroBg}
             >
               <span className="lt-grain-layer" aria-hidden="true" />
               {/* Aura — the page signature: a slow bloom of charged light */}
@@ -2021,14 +2126,45 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 </div>
               </div>
             </section>
-          )
         );
-      
+      }
+
       case 'marquee':
         return t.marquee.enabled && <Marquee items={t.marquee.items} color={sbg('marquee', c.secondary)} accent={c.accent} />;
       
-      case 'why':
-        return t.why.visible && (
+      case 'why': {
+        if (!t.why.visible) return null;
+
+        if (t.why.layoutVariant === "splitAlternating") {
+          const reverse = t.why.imageSide === "right";
+          const images = t.why.points.slice(0, 6);
+          return (
+            <section className="relative overflow-hidden py-16 lg:py-20" style={t.sectionBg?.['why'] ? { backgroundColor: t.sectionBg['why'] } : deepStage}>
+              <span className="lt-grain-layer" aria-hidden="true" />
+              <div className={`relative mx-auto flex max-w-7xl flex-col items-center gap-10 px-4 sm:px-6 lg:gap-16 lg:px-8 ${reverse ? "lg:flex-row-reverse" : "lg:flex-row"}`}>
+                <div className="grid w-full max-w-[560px] grid-cols-3 gap-3 lg:gap-5">
+                  {images.map((point, i) => (
+                    <div
+                      key={i}
+                      className="lt-reveal aspect-square overflow-hidden rounded-[16px]"
+                      style={{ ["--lt-i" as string]: i, boxShadow: "0 2px 4px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.1)" }}
+                    >
+                      {renderMedia(point.image, mediaKey("why", "points", i, "image"), {
+                        className: "w-full h-full object-cover",
+                        alt: point.title,
+                      })}
+                    </div>
+                  ))}
+                </div>
+                <div className="lt-reveal flex-1">
+                  <SectionHeading title={t.why.title} subtitle={t.why.subtitle} accent={c.accent} onDark align="left" />
+                </div>
+              </div>
+            </section>
+          );
+        }
+
+        return (
         <section className="py-16 lg:py-24" style={{ backgroundColor: sbg('why', c.bodyBg) }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading title={t.why.title} subtitle={t.why.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-12 lg:mb-16" />
@@ -2065,7 +2201,8 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           </div>
         </section>
       );
-      
+      }
+
       case 'about':
         return t.about.visible && (
         <section className="py-16 lg:py-24" style={{ backgroundColor: sbg('about', hexToRgba(c.primary, 0.05)) }}>
@@ -2126,6 +2263,54 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         </section>
       );
       
+      case 'guidesRail': {
+        const rail = t.guidesRail;
+        if (!rail || !rail.visible || rail.items.length === 0) return null;
+        return (
+          <section id="guidesRail" className="relative overflow-hidden py-16 lg:py-20" style={t.sectionBg?.['guidesRail'] ? { backgroundColor: t.sectionBg['guidesRail'] } : deepStage}>
+            <span className="lt-grain-layer" aria-hidden="true" />
+            <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <SectionHeading title={rail.title} subtitle={rail.subtitle} accent={c.accent} onDark className="mb-10 lg:mb-12" />
+            </div>
+            <div className="relative mt-2 flex gap-5 overflow-x-auto scrollbar-hide px-4 sm:px-6 lg:px-20 pb-2">
+              {rail.items.map((person, i) => (
+                <a
+                  key={i}
+                  href={resolveLink(person.link || "#")}
+                  className="lt-reveal group relative w-[220px] sm:w-[250px] flex-shrink-0 overflow-hidden rounded-[32px]"
+                  style={{ ["--lt-i" as string]: i, aspectRatio: "2 / 3", boxShadow: cardShadow }}
+                >
+                  {renderMedia(person.image, mediaKey("guidesRail", "items", i, "image"), {
+                    className: "absolute inset-0 w-full h-full object-cover",
+                    alt: person.name,
+                  })}
+                  <div
+                    className="absolute inset-x-0 bottom-0 flex flex-col justify-end gap-1.5 p-5"
+                    style={{ height: "62%", backgroundImage: `linear-gradient(180deg, transparent 0%, ${hexToRgba(c.darkBg, 0.9)} 65%)` }}
+                  >
+                    <p className="font-display text-xl font-bold leading-tight text-white">{person.name}</p>
+                    <div className="relative h-5 overflow-hidden">
+                      <span className="font-body absolute inset-x-0 bottom-0 text-sm text-white/75 transition-all duration-300 group-hover:-translate-y-5 group-hover:opacity-0">
+                        {person.role}
+                      </span>
+                      <span
+                        className="font-body absolute inset-x-0 bottom-0 flex translate-y-5 items-center gap-1 text-sm font-semibold opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100"
+                        style={{ color: c.accent }}
+                      >
+                        Explore
+                        <svg className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                      </span>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        );
+      }
+
       case 'logos':
         return t.logos.enabled && t.logos.logos.length > 0 && (
         <section className="py-12" style={{ backgroundColor: sbg('logos', c.bodyBg), borderTop: `1px solid ${hairline}`, borderBottom: `1px solid ${hairline}` }}>
@@ -2181,9 +2366,12 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         </section>
       );
       
-      case 'stats':
-        return t.stats.visible && (
+      case 'stats': {
+        if (!t.stats.visible) return null;
+        const isTrustRail = t.stats.cardStyle === "lightOnDark";
+        return (
         <section
+          id="stats"
           className="relative overflow-hidden py-16 lg:py-24"
           style={t.sectionBg?.['stats'] ? { backgroundColor: t.sectionBg['stats'] } : deepStage}
         >
@@ -2196,6 +2384,24 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           )}
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading title={t.stats.title} subtitle={t.stats.subtitle} accent={c.accent} onDark className="mb-14" />
+            {isTrustRail ? (
+              <div
+                className="lt-reveal grid grid-cols-1 gap-6 rounded-[16px] p-6 md:grid-cols-3 md:p-10"
+                style={{ backgroundColor: "#FFFFFF", border: `2px solid ${hexToRgba(c.accent, 0.25)}` }}
+              >
+                {t.stats.stats.map((stat, i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: c.darkBg }}>
+                      <ProgramIcon name={stat.icon} className="h-6 w-6" style={{ color: "#fff" } as React.CSSProperties} />
+                    </div>
+                    <div>
+                      <div className="font-display text-lg font-bold leading-snug" style={{ color: "#111827" }}>{stat.value}</div>
+                      <div className="font-body mt-0.5 text-sm leading-snug" style={{ color: "#4B5563" }}>{stat.label}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
             <div className={`grid gap-5 lg:gap-6 grid-cols-1 sm:grid-cols-2 ${t.stats.stats.length >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
               {t.stats.stats.map((stat, i) => {
                 // Labels are used two ways across pages: short captions
@@ -2225,6 +2431,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 </div>
               );})}
             </div>
+            )}
             {hasContent(t.stats.ctaButtonText) && (
               <div className="lt-reveal mt-14 text-center">
                 {t.stats.ctaButtonAction === "url" ? (
@@ -2245,10 +2452,124 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           </div>
         </section>
       );
-      
-      case 'testimonials':
-        return t.testimonials.visible && t.testimonials.items.length > 0 && (
-        <section className="py-16 lg:py-24" style={{ backgroundColor: sbg('testimonials', c.bodyBg) }}>
+      }
+
+      case 'formats': {
+        const fmt = t.formats;
+        if (!fmt || !fmt.visible || formatsSlides.length === 0) return null;
+        const activeSlide = formatsSlides[Math.min(currentFormatsSlide, formatsSlides.length - 1)];
+        return (
+          <section id="formats" className="relative overflow-hidden py-16 lg:py-20" style={t.sectionBg?.['formats'] ? { backgroundColor: t.sectionBg['formats'] } : deepStage}>
+            <span className="lt-grain-layer" aria-hidden="true" />
+            <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <SectionHeading title={fmt.title} subtitle={fmt.subtitle} accent={c.accent} onDark className="mb-10 lg:mb-12" />
+              <div className="lt-reveal relative w-full overflow-hidden rounded-[28px]" style={{ aspectRatio: "1310 / 440", border: "1px solid rgba(255,255,255,0.16)", boxShadow: "0 40px 80px -30px rgba(0,0,0,.7)" }}>
+                {formatsSlides.map((slide, index) => (
+                  <div
+                    key={`${slide.image}-${index}`}
+                    className={`absolute inset-0 transition-all duration-700 ease-in-out ${index === currentFormatsSlide ? "opacity-100 scale-100" : "opacity-0 scale-[1.02] pointer-events-none"}`}
+                  >
+                    {renderMedia(slide.image, mediaKey("formats", "slides", index, "image"), {
+                      wrapperClassName: "absolute inset-0 w-full h-full",
+                      className: "w-full h-full object-cover",
+                      alt: slide.label || activeSlide?.label || "",
+                      isActive: index === currentFormatsSlide,
+                    })}
+                  </div>
+                ))}
+              </div>
+              {formatsSlides.length > 1 && (
+                <div className="mt-6 flex items-center justify-center gap-2">
+                  {formatsSlides.map((_, index) => (
+                    <button
+                      key={`formats-dot-${index}`}
+                      type="button"
+                      onClick={() => setCurrentFormatsSlide(index)}
+                      aria-label={`Go to slide ${index + 1}`}
+                      className="h-2 rounded-full transition-all duration-300"
+                      style={{
+                        width: index === currentFormatsSlide ? 24 : 8,
+                        backgroundColor: index === currentFormatsSlide ? c.accent : "rgba(255,255,255,0.3)",
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        );
+      }
+
+      case 'testimonials': {
+        if (!t.testimonials.visible || t.testimonials.items.length === 0) return null;
+
+        if (t.testimonials.displayMode === "marquee") {
+          const items = t.testimonials.items;
+          const rowForward = [...items, ...items];
+          const rowReverse = [...[...items].reverse(), ...[...items].reverse()];
+          const renderMarqueeCard = (item: TestimonialItem, key: string) => (
+            <div
+              key={key}
+              className="flex h-[152px] w-[280px] sm:w-[300px] flex-shrink-0 flex-col gap-2 rounded-[16px] p-4"
+              style={{ backgroundColor: surface, border: `1px solid ${hairline}`, boxShadow: cardShadow }}
+            >
+              <div className="flex items-center gap-3">
+                {item.image ? (
+                  renderMedia(item.image, undefined, {
+                    className: "h-9 w-9 rounded-full object-cover",
+                    wrapperClassName: "h-9 w-9 rounded-full overflow-hidden flex-shrink-0",
+                    alt: item.name,
+                  })
+                ) : (
+                  <div
+                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full font-display text-sm font-bold text-white"
+                    style={{ backgroundImage: `linear-gradient(135deg, ${c.primary}, ${c.accent})` }}
+                  >
+                    {item.name.charAt(0)}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-body text-sm font-bold" style={{ color: ink }}>{item.name}</p>
+                  {hasContent(item.role) && <p className="truncate font-body text-xs" style={{ color: muted }}>{item.role}</p>}
+                </div>
+                <div className="flex flex-shrink-0 items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <svg key={s} className="h-3 w-3" viewBox="0 0 20 20" fill={c.accent}>
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+              </div>
+              <p className="line-clamp-3 font-body text-xs leading-snug" style={{ color: muted }}>{item.quote}</p>
+            </div>
+          );
+          const maskStyle: React.CSSProperties = {
+            maskImage: "linear-gradient(to right, transparent, #000 8%, #000 92%, transparent)",
+            WebkitMaskImage: "linear-gradient(to right, transparent, #000 8%, #000 92%, transparent)",
+          };
+          return (
+            <section id="testimonials" className="overflow-hidden py-16 lg:py-24" style={{ backgroundColor: sbg('testimonials', c.bodyBg) }}>
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <SectionHeading title={t.testimonials.title} subtitle={t.testimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-12 lg:mb-16" />
+              </div>
+              <div className="lt-reveal flex flex-col gap-5">
+                <div className="lt-marquee-row overflow-hidden" style={maskStyle}>
+                  <div className="lt-marquee-track flex w-max gap-5">
+                    {rowForward.map((item, i) => renderMarqueeCard(item, `a-${i}`))}
+                  </div>
+                </div>
+                <div className="lt-marquee-row overflow-hidden" style={maskStyle}>
+                  <div className="lt-marquee-track lt-marquee-reverse flex w-max gap-5">
+                    {rowReverse.map((item, i) => renderMarqueeCard(item, `b-${i}`))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          );
+        }
+
+        return (
+        <section id="testimonials" className="py-16 lg:py-24" style={{ backgroundColor: sbg('testimonials', c.bodyBg) }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading title={t.testimonials.title} subtitle={t.testimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-12 lg:mb-16" />
             <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
@@ -2308,6 +2629,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           </div>
         </section>
       );
+      }
 
       case 'videoTestimonials':
         return t.videoTestimonials.visible && t.videoTestimonials.items.length > 0 && (
@@ -2440,6 +2762,27 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         </section>
       );
       
+      case 'appBanner': {
+        const banner = t.appBanner;
+        if (!banner || !banner.visible || !hasContent(banner.image)) return null;
+        return (
+          <section id="appBanner" className="py-16 lg:py-20" style={{ backgroundColor: sbg('appBanner', c.bodyBg) }}>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <a
+                href={resolveLink(banner.link)}
+                className="lt-reveal lt-card lt-zoom block overflow-hidden rounded-[28px]"
+                style={{ border: `1px solid ${hairline}`, boxShadow: cardShadow }}
+              >
+                {renderMedia(banner.image, mediaKey("appBanner", "image"), {
+                  className: "w-full h-auto object-cover",
+                  alt: banner.alt || "",
+                })}
+              </a>
+            </div>
+          </section>
+        );
+      }
+
       case 'invitation':
         return t.invitation.enabled && (
         <section className="py-16 lg:py-24" style={{ backgroundColor: sbg('invitation', hexToRgba(c.primary, 0.06)) }}>
@@ -2790,6 +3133,97 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             )}
           </div>
         </div>
+        {/* Logo / address / social + link columns */}
+        {(hasContent(t.footer.logo) || hasContent(t.footer.address) || (t.footer.socialLinks || []).length > 0 || (t.footer.linkColumns || []).length > 0) && (
+          <div className="relative border-t border-white/10 py-14">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-10 md:flex-row md:justify-between">
+              {(hasContent(t.footer.logo) || hasContent(t.footer.address) || (t.footer.socialLinks || []).length > 0) && (
+                <div>
+                  {hasContent(t.footer.logo) ? (
+                    renderMedia(t.footer.logo, mediaKey("footer", "logo"), { className: "h-6 w-auto object-contain", alt: "" })
+                  ) : (
+                    <span className="font-display text-lg font-bold text-white">{t.footer.copyright.replace(/^©\s*\d{4}\s*/, "")}</span>
+                  )}
+                  {hasContent(t.footer.address) && (
+                    <p className="font-body mt-4 max-w-xs whitespace-pre-line text-xs leading-relaxed text-white/50">{t.footer.address}</p>
+                  )}
+                  {(t.footer.socialLinks || []).length > 0 && (
+                    <div className="mt-4 flex gap-2">
+                      {(t.footer.socialLinks || []).map((social, i) => {
+                        const SocialIcon = SOCIAL_ICON_MAP[social.icon] || Globe;
+                        return (
+                          <a
+                            key={i}
+                            href={resolveLink(social.url)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="lt-focus flex h-9 w-9 items-center justify-center rounded-full text-white/70 transition-colors hover:text-white"
+                            style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
+                          >
+                            <SocialIcon className="h-4 w-4" />
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+              {(t.footer.linkColumns || []).length > 0 && (
+                <div className="grid flex-1 grid-cols-2 gap-8 sm:grid-cols-3 md:justify-items-end">
+                  {(t.footer.linkColumns || []).map((col, i) => (
+                    <div key={i} className="flex flex-col">
+                      <p className="font-body mb-3 text-sm font-semibold text-white">{col.heading}</p>
+                      {col.links.map((link, j) => (
+                        <a key={j} href={resolveLink(link.url)} className="lt-focus font-body mb-2 text-xs text-white/50 transition-colors hover:text-white">
+                          {link.label}
+                        </a>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Popular Links tag cloud */}
+        {(t.footer.popularLinks || []).length > 0 && (
+          <div className="relative border-t border-white/10 py-10">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <p className="font-body mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Popular Links</p>
+              <div className="flex flex-wrap gap-x-1 gap-y-2">
+                {(t.footer.popularLinks || []).map((link, i) => (
+                  <a key={i} href={resolveLink(link.url)} className="lt-focus font-body text-xs text-white/45 transition-colors hover:text-white">
+                    {link.label}
+                    {i < (t.footer.popularLinks || []).length - 1 && <span className="text-white/25">,&nbsp;</span>}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* App download */}
+        {t.footer.appDownload && hasContent(t.footer.appDownload.text) && (hasContent(t.footer.appDownload.iosUrl) || hasContent(t.footer.appDownload.androidUrl)) && (
+          <div className="relative border-t border-white/10 py-10">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <p className="font-body mb-3 text-sm font-medium text-white/70">{t.footer.appDownload.text}</p>
+              <div className="flex flex-wrap gap-3">
+                {hasContent(t.footer.appDownload.iosUrl) && (
+                  <a href={resolveLink(t.footer.appDownload.iosUrl)} target="_blank" rel="noopener noreferrer" className="lt-focus inline-flex items-center rounded-full px-4 py-2 text-xs font-semibold text-white transition-colors" style={{ backgroundColor: "rgba(255,255,255,0.08)" }}>
+                    App Store
+                  </a>
+                )}
+                {hasContent(t.footer.appDownload.androidUrl) && (
+                  <a href={resolveLink(t.footer.appDownload.androidUrl)} target="_blank" rel="noopener noreferrer" className="lt-focus inline-flex items-center rounded-full px-4 py-2 text-xs font-semibold text-white transition-colors" style={{ backgroundColor: "rgba(255,255,255,0.08)" }}>
+                    Google Play
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Bottom Bar */}
         <div className="relative border-t border-white/10 py-7">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -2837,7 +3271,12 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         @keyframes lt-aura { 0%, 100% { transform: scale(1) translate3d(0,0,0); opacity: .7; } 50% { transform: scale(1.1) translate3d(0,-2%,0); opacity: 1; } }
         @keyframes lt-rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
         @keyframes lt-sheen { 0% { transform: translateX(-130%) skewX(-18deg); } 55%, 100% { transform: translateX(240%) skewX(-18deg); } }
+        @keyframes lt-marquee-l { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        @keyframes lt-marquee-r { 0% { transform: translateX(-50%); } 100% { transform: translateX(0); } }
         .animate-marquee { animation: marquee 20s linear infinite; }
+        .lt-marquee-track { animation: lt-marquee-l 46s linear infinite; }
+        .lt-marquee-track.lt-marquee-reverse { animation-name: lt-marquee-r; }
+        .lt-marquee-row:hover .lt-marquee-track { animation-play-state: paused; }
         .font-display { font-family: ${t.fontFamily ? t.fontFamily : "'Marcellus', serif"}; }
         .font-body { font-family: ${t.fontFamily ? t.fontFamily : "'Inter', sans-serif"}; }
 
@@ -2878,7 +3317,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         @media (prefers-reduced-motion: reduce) {
           .lt-anim .lt-reveal, .lt-anim .lt-reveal.is-in { opacity: 1 !important; transform: none !important; transition: none !important; }
           .lt-anim .lt-rise { animation: none !important; }
-          .lt-aura, .animate-marquee { animation: none !important; }
+          .lt-aura, .animate-marquee, .lt-marquee-track, .animate-bounce { animation: none !important; }
           .lt-card:hover, .lt-cta:hover { transform: none !important; }
           .lt-zoom:hover img, .lt-zoom:hover video { transform: none !important; }
         }

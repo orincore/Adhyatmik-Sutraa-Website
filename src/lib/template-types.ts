@@ -33,6 +33,9 @@ export interface HeroSection {
   carouselAutoplay: boolean;     // Auto-advance slides
   carouselInterval: number;      // Duration between slides (ms)
   floatingStats: { label: string; value: string }[]; // Floating stat badges
+  layout?: "boxed" | "fullBleed"; // "boxed" (default) = current centered layout; "fullBleed" = full-viewport with bottom-anchored image
+  scrollIndicatorText?: string;   // e.g. "Scroll down" — only shown in fullBleed layout
+  scrollIndicatorTarget?: string; // anchor id (e.g. "#stats") the scroll indicator links to
   visible: boolean;
 }
 
@@ -45,6 +48,8 @@ export interface WhySection {
   title: string;                 // e.g. "Why Effort Isn't Working Anymore"
   subtitle: string;
   points: { title: string; description: string; image: string }[];
+  layoutVariant?: "cards" | "splitAlternating"; // "cards" (default) = current 3-card grid; "splitAlternating" = image grid + heading
+  imageSide?: "left" | "right"; // only used by "splitAlternating" — which side the image grid sits on (default "left")
   visible: boolean;
 }
 
@@ -73,11 +78,12 @@ export interface GallerySection {
 export interface StatsSection {
   title: string;
   subtitle: string;
-  stats: { value: string; label: string }[];
+  stats: { value: string; label: string; icon?: string }[];
   ctaButtonText: string;
   ctaButtonLink: string;
   ctaButtonAction: "invitation" | "url"; // CTA button action type
   backgroundImage: string;
+  cardStyle?: "glass" | "lightOnDark"; // "glass" (default) = current dark glassy cards; "lightOnDark" = trust-rail: light card w/ icon-in-circle
   visible: boolean;
 }
 
@@ -92,6 +98,45 @@ export interface TestimonialsSection {
   title: string;
   subtitle: string;
   items: TestimonialItem[];
+  displayMode?: "grid" | "marquee"; // "grid" (default) = current static grid; "marquee" = dual-direction auto-scrolling rows
+  visible: boolean;
+}
+
+export interface GuidesRailItem {
+  name: string;
+  role: string;
+  image: string;
+  link?: string;
+}
+
+// Horizontal-scroll rail of people/practitioner cards (portrait, gradient
+// name-overlay, hover reveals an "Explore" link). No JS carousel state —
+// relies on native touch/scroll.
+export interface GuidesRailSection {
+  title: string;
+  subtitle: string;
+  items: GuidesRailItem[];
+  visible: boolean;
+}
+
+export interface FormatsSlide {
+  image: string;
+  label?: string;
+}
+
+// Single large rotating image carousel with dot pagination.
+export interface FormatsSection {
+  title: string;
+  subtitle: string;
+  slides: FormatsSlide[];
+  visible: boolean;
+}
+
+// Single full-width clickable banner image (e.g. app download / secondary CTA).
+export interface AppBannerSection {
+  image: string;
+  link: string;
+  alt?: string;
   visible: boolean;
 }
 
@@ -209,10 +254,32 @@ export interface FooterCTA {
   showCtaButton?: boolean;
 }
 
+export interface FooterLinkColumn {
+  heading: string;
+  links: { label: string; url: string }[];
+}
+
+export interface FooterSocialLink {
+  icon: "instagram" | "facebook" | "youtube" | "x" | "linkedin" | "whatsapp";
+  url: string;
+}
+
+export interface FooterAppDownload {
+  text: string;
+  iosUrl?: string;
+  androidUrl?: string;
+}
+
 export interface FooterSection {
   cta: FooterCTA;
   copyright: string;
   links: { label: string; url: string }[];
+  logo?: string;                        // footer logo image URL (falls back to store name if empty)
+  address?: string;                     // short postal address, line breaks preserved
+  socialLinks?: FooterSocialLink[];
+  linkColumns?: FooterLinkColumn[];      // e.g. "Company" column of legal/nav links
+  popularLinks?: { label: string; url: string }[]; // SEO tag-cloud row
+  appDownload?: FooterAppDownload;
   enabled: boolean;
 }
 
@@ -246,14 +313,17 @@ export const CANONICAL_SECTIONS = [
   "marquee",
   "why",
   "about",
+  "guidesRail",
   "logos",
   "gallery",
   "stats",
+  "formats",
   "testimonials",
   "videoTestimonials",
   "program",
   "contentBlocks",
   "richContent",
+  "appBanner",
   "invitation",
   "bonus",
   "faq",
@@ -265,14 +335,17 @@ export const SECTION_LABELS: Record<string, string> = {
   marquee: "Marquee / Ticker",
   why: "Why Section",
   about: "About",
+  guidesRail: "People Rail",
   logos: "Logo Bar",
   gallery: "Gallery",
   stats: "Stats / CTA",
+  formats: "Format Carousel",
   testimonials: "Testimonials",
   videoTestimonials: "Video Testimonials",
   program: "Program",
   contentBlocks: "Content Blocks",
   richContent: "Rich Content",
+  appBanner: "App Banner",
   invitation: "Request Invitation",
   bonus: "Bonus",
   faq: "FAQ",
@@ -315,14 +388,17 @@ export function getSectionVisibility(t: LandingTemplateData, key: string): boole
     case "marquee": return t.marquee.enabled;
     case "why": return t.why.visible;
     case "about": return t.about.visible;
+    case "guidesRail": return t.guidesRail?.visible ?? true;
     case "logos": return t.logos.enabled;
     case "gallery": return t.gallery.visible;
     case "stats": return t.stats.visible;
+    case "formats": return t.formats?.visible ?? true;
     case "testimonials": return t.testimonials.visible;
     case "videoTestimonials": return t.videoTestimonials.visible;
     case "program": return t.program.visible;
     case "contentBlocks": return (t.contentBlocks || []).some((b) => b.enabled);
     case "richContent": return true;
+    case "appBanner": return t.appBanner?.visible ?? true;
     case "invitation": return t.invitation.enabled;
     case "bonus": return t.bonus.enabled;
     case "faq": return t.faq?.enabled ?? true;
@@ -344,14 +420,17 @@ export function applySectionVisibility(t: LandingTemplateData, key: string, visi
     case "marquee": return { ...t, marquee: { ...t.marquee, enabled: visible } };
     case "why": return { ...t, why: { ...t.why, visible } };
     case "about": return { ...t, about: { ...t.about, visible } };
+    case "guidesRail": return { ...t, guidesRail: { ...(t.guidesRail || DEFAULT_TEMPLATE_DATA.guidesRail!), visible } };
     case "logos": return { ...t, logos: { ...t.logos, enabled: visible } };
     case "gallery": return { ...t, gallery: { ...t.gallery, visible } };
     case "stats": return { ...t, stats: { ...t.stats, visible } };
+    case "formats": return { ...t, formats: { ...(t.formats || DEFAULT_TEMPLATE_DATA.formats!), visible } };
     case "testimonials": return { ...t, testimonials: { ...t.testimonials, visible } };
     case "videoTestimonials": return { ...t, videoTestimonials: { ...t.videoTestimonials, visible } };
     case "program": return { ...t, program: { ...t.program, visible } };
     case "contentBlocks": return { ...t, contentBlocks: (t.contentBlocks || []).map((b) => ({ ...b, enabled: visible })) };
     case "richContent": return t;
+    case "appBanner": return { ...t, appBanner: { ...(t.appBanner || DEFAULT_TEMPLATE_DATA.appBanner!), visible } };
     case "invitation": return { ...t, invitation: { ...t.invitation, enabled: visible } };
     case "bonus": return { ...t, bonus: { ...t.bonus, enabled: visible } };
     case "faq": return { ...t, faq: { ...(t.faq || DEFAULT_TEMPLATE_DATA.faq!), enabled: visible } };
@@ -389,15 +468,18 @@ export interface LandingTemplateData {
   marquee: MarqueeSection;
   why: WhySection;
   about: AboutSection;
+  guidesRail?: GuidesRailSection;
   logos: LogoSection;
   gallery: GallerySection;
   stats: StatsSection;
+  formats?: FormatsSection;
   testimonials: TestimonialsSection;
   videoTestimonials: VideoTestimonialsSection;
   program: ProgramSection;
   bonus: BonusSection;
   contentBlocks?: ContentBlockSection[];
   faq?: FaqSection;
+  appBanner?: AppBannerSection;
   invitation: InvitationSection;
   footer: FooterSection;
   floatingButton: FloatingButtonSettings;
@@ -416,7 +498,7 @@ export interface LandingTemplateData {
 // Default template data (placeholder content)
 // ---------------------------------------------------------------------------
 export const DEFAULT_TEMPLATE_DATA: LandingTemplateData = {
-  sectionOrder: ['hero', 'marquee', 'why', 'about', 'logos', 'gallery', 'stats', 'testimonials', 'videoTestimonials', 'program', 'contentBlocks', 'invitation', 'bonus', 'faq', 'footer'],
+  sectionOrder: ['hero', 'marquee', 'why', 'about', 'guidesRail', 'logos', 'gallery', 'stats', 'formats', 'testimonials', 'videoTestimonials', 'program', 'contentBlocks', 'appBanner', 'invitation', 'bonus', 'faq', 'footer'],
   mediaSettings: {},
   colors: {
     primary: "#F5A623",
@@ -492,6 +574,24 @@ export const DEFAULT_TEMPLATE_DATA: LandingTemplateData = {
       "Featured in Forbes & TEDx",
     ],
     visible: true,
+  },
+  guidesRail: {
+    title: "Learn From Our Trusted Guides",
+    subtitle: "Experienced, vetted practitioners across every practice",
+    items: [],
+    visible: false,
+  },
+  formats: {
+    title: "Your Healing, Your Way",
+    subtitle: "Learn, connect and heal in the format that works best for you.",
+    slides: [],
+    visible: false,
+  },
+  appBanner: {
+    image: "",
+    link: "#",
+    alt: "",
+    visible: false,
   },
   logos: {
     title: "Featured In",
@@ -652,15 +752,18 @@ export function normalizeTemplateData(data?: Partial<LandingTemplateData>): Land
     marquee: { ...DEFAULT_TEMPLATE_DATA.marquee, ...data.marquee },
     why: { ...DEFAULT_TEMPLATE_DATA.why, ...data.why },
     about: { ...DEFAULT_TEMPLATE_DATA.about, ...data.about },
+    guidesRail: { ...DEFAULT_TEMPLATE_DATA.guidesRail!, ...data.guidesRail },
     logos: { ...DEFAULT_TEMPLATE_DATA.logos, ...data.logos },
     gallery: { ...DEFAULT_TEMPLATE_DATA.gallery, ...data.gallery },
     stats: { ...DEFAULT_TEMPLATE_DATA.stats, ...data.stats },
+    formats: { ...DEFAULT_TEMPLATE_DATA.formats!, ...data.formats },
     testimonials: { ...DEFAULT_TEMPLATE_DATA.testimonials, ...data.testimonials },
     videoTestimonials: { ...DEFAULT_TEMPLATE_DATA.videoTestimonials, ...data.videoTestimonials },
     program: { ...DEFAULT_TEMPLATE_DATA.program, ...data.program },
     bonus: { ...DEFAULT_TEMPLATE_DATA.bonus, ...data.bonus },
     contentBlocks: data.contentBlocks || [],
     faq: { ...DEFAULT_TEMPLATE_DATA.faq!, ...data.faq },
+    appBanner: { ...DEFAULT_TEMPLATE_DATA.appBanner!, ...data.appBanner },
     invitation: { ...DEFAULT_TEMPLATE_DATA.invitation, ...data.invitation },
     footer: { ...DEFAULT_TEMPLATE_DATA.footer, ...data.footer },
     floatingButton: { ...DEFAULT_TEMPLATE_DATA.floatingButton, ...data.floatingButton },
