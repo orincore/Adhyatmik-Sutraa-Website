@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CalendarDays, Clock3, MapPin, CheckCircle2, ChevronLeft, ChevronRight, Zap, Radio, FlaskConical, BookOpen, Star, Heart, Leaf, Sun, Moon, Sparkles, Target, Trophy, Users, Brain, Lightbulb, Shield, Flame, Gem, Music, Globe, Camera, Smile, Coffee, Rocket, Award, MessageSquare, Lock, GripVertical, ArrowUp, ArrowDown, Eye, EyeOff, Settings2, Plus, Copy, Trash2, Instagram, Facebook, Youtube, Linkedin, Twitter, MessageCircle, Hourglass, Languages, ShieldCheck, RefreshCcw, BadgeCheck, Wallet, TrendingUp, AlertTriangle, Video, Gift, PlayCircle, CircleDollarSign, Frown, CloudRain, Ban, Infinity as InfinityIcon, Headphones, Ticket, Check, X } from "lucide-react";
+import { CalendarDays, Clock3, MapPin, CheckCircle2, ChevronLeft, ChevronRight, Zap, Radio, FlaskConical, BookOpen, Star, Heart, Leaf, Sun, Moon, Sparkles, Target, Trophy, Users, Brain, Lightbulb, Shield, Flame, Gem, Music, Globe, Camera, Smile, Coffee, Rocket, Award, MessageSquare, Lock, GripVertical, ArrowUp, ArrowDown, Eye, EyeOff, Settings2, Plus, Copy, Trash2, Instagram, Facebook, Youtube, Linkedin, Twitter, MessageCircle, Hourglass, Languages, ShieldCheck, RefreshCcw, BadgeCheck, Wallet, TrendingUp, AlertTriangle, Video, Gift, PlayCircle, CircleDollarSign, Frown, CloudRain, Ban, Infinity as InfinityIcon, Headphones, Ticket, Check, X, Loader2 } from "lucide-react";
 import { DynamicPageRenderer } from "@/components/storefront/dynamic-page-renderer";
 
 // Icon resolver for why-section cards
@@ -78,7 +78,7 @@ function isDarkColor(hex: string): boolean {
 
 // The "stage" backdrop: a saturated base with aura blooms layered over it, so
 // dark sections read as lit atmosphere rather than a flat block of color.
-function stageBackground(base: string, glow: string, flare: string): React.CSSProperties {
+function stageBackground(base: string, glow: string, flare: string, animated = true): React.CSSProperties {
   return {
     backgroundColor: base,
     backgroundImage: [
@@ -86,6 +86,16 @@ function stageBackground(base: string, glow: string, flare: string): React.CSSPr
       `radial-gradient(52% 46% at 88% 16%, ${hexToRgba(flare, 0.34)} 0%, transparent 66%)`,
       `radial-gradient(74% 60% at 50% 112%, ${hexToRgba(glow, 0.36)} 0%, transparent 62%)`,
     ].join(", "),
+    // Oversized, non-repeating layers leave room for the blooms to travel; the
+    // keyframes move AND resize each one on its own path, so the light visibly
+    // swells and wanders instead of sliding as one flat sheet. Declared inline
+    // (not via a class) because every stage surface consumes this object as
+    // `style={stage}` — the animation is dropped at the call site when
+    // prefers-reduced-motion is set.
+    backgroundRepeat: "no-repeat",
+    backgroundSize: "150% 150%, 140% 140%, 160% 160%",
+    backgroundPosition: "0% 0%, 100% 0%, 50% 100%",
+    ...(animated ? { animation: "lt-stage-drift 18s ease-in-out infinite" } : {}),
   };
 }
 
@@ -125,7 +135,7 @@ function SectionHeading({
       </div>
       {hasContent(title) && (
         <h2
-          className="lt-reveal font-display font-bold leading-[1.08] tracking-[-0.02em] text-[clamp(1.9rem,4vw,3.25rem)]"
+          className="lt-reveal font-display font-bold leading-[1.08] tracking-[-0.02em] text-[clamp(1.6rem,4vw,3.25rem)]"
           style={{ ["--lt-i" as string]: 1, color: onDark ? "#fff" : "#111827" }}
         >
           {title}
@@ -720,7 +730,9 @@ function VideoTestimonialsSlider({ items, primaryColor }: {
       {/* Scrollable track — no snap so silent jumps are invisible */}
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scrollbar-hide"
+        // overflow-y pinned + touch-action pan-x so vertical swipes over the
+        // slider scroll the page rather than this track (see the guides rail).
+        className="flex touch-pan-x gap-4 overflow-x-auto overflow-y-hidden overscroll-x-contain scrollbar-hide"
         style={{ scrollSnapType: "none" }}
       >
         {tripled.map((item, i) => {
@@ -1525,6 +1537,7 @@ function InvitationDialog({
   onOpenChange,
   invitation,
   primaryColor,
+  accentColor,
   landingPageId,
   pageSlug,
   isPreviewMode,
@@ -1533,6 +1546,7 @@ function InvitationDialog({
   onOpenChange: (open: boolean) => void;
   invitation: LandingTemplateData["invitation"];
   primaryColor: string;
+  accentColor: string;
   landingPageId?: string;
   pageSlug?: string;
   isPreviewMode: boolean;
@@ -1822,14 +1836,38 @@ function InvitationDialog({
                   <p className="text-sm text-emerald-600 mt-1">{invitation.successDescription}</p>
                 </div>
               ) : (
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full h-11 sm:h-12 rounded-2xl text-sm sm:text-base font-semibold"
-                  style={{ backgroundColor: primaryColor, color: invitation.buttonTextColor || "#1B1F3A" }}
-                >
-                  {loading ? "Submitting..." : invitation.formButtonText}
-                </Button>
+                // Matches the CTA language used everywhere else on the page
+                // (gradient fill + sheen sweep + sliding arrow) instead of the
+                // flat block this used to be, so the highest-intent button on
+                // the page is no longer the plainest one.
+                <div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="lt-cta lt-focus group/cta relative inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-semibold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-70 sm:h-[52px] sm:text-base"
+                    style={{
+                      ...ctaStyle(primaryColor, accentColor),
+                      ...(invitation.buttonTextColor ? { color: invitation.buttonTextColor } : {}),
+                    }}
+                  >
+                    {!loading && <span className="lt-cta-sheen" aria-hidden="true" />}
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                        Confirming…
+                      </>
+                    ) : (
+                      <>
+                        {invitation.formButtonText}
+                        <CtaArrow className="ml-0" />
+                      </>
+                    )}
+                  </button>
+                  <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-gray-500">
+                    <Lock className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+                    Your details stay private. No spam, ever.
+                  </p>
+                </div>
               )}
             </form>
           </div>
@@ -1891,8 +1929,20 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
   // Design tokens derived from the page's own palette, so each landing page
   // gets this treatment in its own colors.
   const onDarkBody = isDarkColor(c.bodyBg);
-  const stage = stageBackground(c.secondary, c.primary, c.accent);
-  const deepStage = stageBackground(c.darkBg, c.primary, c.accent);
+  // Starts true so SSR and the first client render agree; the effect below only
+  // ever turns it off, which can't cause a hydration mismatch.
+  const [stageAnimated, setStageAnimated] = useState(true);
+  useEffect(() => {
+    const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    if (!mq) return;
+    const sync = () => setStageAnimated(!mq.matches);
+    sync();
+    mq.addEventListener?.("change", sync);
+    return () => mq.removeEventListener?.("change", sync);
+  }, []);
+
+  const stage = stageBackground(c.secondary, c.primary, c.accent, stageAnimated);
+  const deepStage = stageBackground(c.darkBg, c.primary, c.accent, stageAnimated);
   // Surface tokens for the calm "reading" sections that sit on the body color.
   const ink = onDarkBody ? "#FFFFFF" : "#111827";
   const muted = onDarkBody ? "rgba(255,255,255,0.70)" : "#4B5563";
@@ -2374,7 +2424,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
                 {hasContent(t.hero.subheadline) && (
                   <p
-                    className="lt-rise font-body mx-auto mt-9 max-w-2xl text-base sm:text-lg leading-relaxed text-white/75"
+                    className="lt-rise font-body mx-auto mt-7 max-w-2xl text-base sm:text-lg leading-relaxed text-white/75"
                     style={{ ["--lt-i" as string]: 3 }}
                   >
                     {t.hero.subheadline}
@@ -2437,7 +2487,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           const reverse = t.why.imageSide === "right";
           const images = t.why.points.slice(0, 6);
           return (
-            <section className="relative overflow-hidden py-11 sm:py-14 lg:py-16" style={t.sectionBg?.['why'] ? { backgroundColor: t.sectionBg['why'] } : deepStage}>
+            <section className="relative overflow-hidden py-8 sm:py-11 lg:py-14" style={t.sectionBg?.['why'] ? { backgroundColor: t.sectionBg['why'] } : deepStage}>
               <span className="lt-grain-layer" aria-hidden="true" />
               <div className={`relative mx-auto flex max-w-7xl flex-col items-center gap-10 px-4 sm:px-6 lg:gap-16 lg:px-8 ${reverse ? "lg:flex-row-reverse" : "lg:flex-row"}`}>
                 <div className="grid w-full max-w-[560px] grid-cols-3 gap-3 lg:gap-5">
@@ -2463,9 +2513,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         }
 
         return (
-        <section className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('why', c.bodyBg) }}>
+        <section className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('why', c.bodyBg) }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading title={t.why.title} subtitle={t.why.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8 lg:mb-11" />
+            <SectionHeading title={t.why.title} subtitle={t.why.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-9" />
             <div className="grid gap-6 lg:gap-7 sm:grid-cols-2 lg:grid-cols-3">
               {t.why.points.map((point, i) => {
                 const pointMedia = renderMedia(point.image, mediaKey("why", "points", i, "image"), {
@@ -2483,8 +2533,8 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                     boxShadow: cardShadow,
                   }}
                 >
-                  {pointMedia && <div className="h-56 overflow-hidden">{pointMedia}</div>}
-                  <div className="p-7">
+                  {pointMedia && <div className="h-44 overflow-hidden sm:h-56">{pointMedia}</div>}
+                  <div className="p-5 text-center sm:p-7 sm:text-left">
                     {/* RitualRule is an inline-flex atom, so it needs a flex
                         parent to center — on its own it hugs the left edge. */}
                     <div className="mb-4 flex justify-center">
@@ -2507,7 +2557,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
       case 'about':
         return t.about.visible && (
-        <section className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('about', hexToRgba(c.primary, 0.05)) }}>
+        <section className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('about', hexToRgba(c.primary, 0.05)) }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-12 lg:gap-16 items-center">
               <div className="lt-reveal relative mx-auto w-full max-w-sm">
@@ -2569,12 +2619,20 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         const rail = t.guidesRail;
         if (!rail || !rail.visible || rail.items.length === 0) return null;
         return (
-          <section id="guidesRail" className="relative overflow-hidden py-11 sm:py-14 lg:py-16" style={t.sectionBg?.['guidesRail'] ? { backgroundColor: t.sectionBg['guidesRail'] } : deepStage}>
+          <section id="guidesRail" className="relative overflow-hidden py-8 sm:py-11 lg:py-14" style={t.sectionBg?.['guidesRail'] ? { backgroundColor: t.sectionBg['guidesRail'] } : deepStage}>
             <span className="lt-grain-layer" aria-hidden="true" />
             <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={rail.title} subtitle={rail.subtitle} accent={c.accent} onDark className="mb-7 lg:mb-9" />
+              <SectionHeading title={rail.title} subtitle={rail.subtitle} accent={c.accent} onDark className="mb-5 lg:mb-7" />
             </div>
-            <div className="relative mt-2 flex gap-5 overflow-x-auto scrollbar-hide px-4 sm:px-6 lg:px-20 pb-2">
+            {/* Horizontal-only rail. overflow-x-auto on its own is not enough:
+                per spec a non-visible value on one axis promotes the other from
+                `visible` to `auto`, so the rail also became vertically
+                scrollable and swallowed vertical swipes on touch. overflow-y
+                is pinned to hidden and touch-action limited to pan-x so
+                up/down gestures scroll the page instead. pb-7 leaves room for
+                the lt-reveal translateY(26px) so cards aren't clipped mid-
+                animation now that the box clips vertically. */}
+            <div className="relative mt-2 flex touch-pan-x gap-5 overflow-x-auto overflow-y-hidden overscroll-x-contain scrollbar-hide px-4 pb-7 sm:px-6 lg:px-20">
               {rail.items.map((person, i) => (
                 <a
                   key={i}
@@ -2617,7 +2675,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         return t.logos.enabled && t.logos.logos.length > 0 && (
         <section className="py-12" style={{ backgroundColor: sbg('logos', c.bodyBg), borderTop: `1px solid ${hairline}`, borderBottom: `1px solid ${hairline}` }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <p className="lt-reveal text-center font-body text-[11px] font-semibold uppercase tracking-[0.28em] mb-8" style={{ color: muted }}>
+            <p className="lt-reveal text-center font-body text-[11px] font-semibold uppercase tracking-[0.28em] mb-6" style={{ color: muted }}>
               {t.logos.title}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-10 opacity-60">
@@ -2642,14 +2700,14 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       
       case 'gallery':
         return t.gallery.visible && t.gallery.images.length > 0 && (
-        <section className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('gallery', c.bodyBg) }}>
+        <section className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('gallery', c.bodyBg) }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading title={t.gallery.title} subtitle={t.gallery.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8" />
+            <SectionHeading title={t.gallery.title} subtitle={t.gallery.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6" />
             <div className="flex flex-wrap justify-center gap-4">
               {t.gallery.images.map((img, i) => (
                 <div
                   key={i}
-                  className="lt-reveal lt-card lt-zoom group relative aspect-[4/3] w-full overflow-hidden rounded-[22px] sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.667rem)]"
+                  className="lt-reveal lt-card lt-zoom group relative aspect-[4/3] w-[calc(50%-0.5rem)] overflow-hidden rounded-[22px] lg:w-[calc(33.333%-0.667rem)]"
                   style={{ ["--lt-i" as string]: i % 3, border: `1px solid ${hairline}`, boxShadow: cardShadow }}
                 >
                   {renderMedia(img.url, mediaKey("gallery", "images", i, "url"), {
@@ -2674,7 +2732,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         return (
         <section
           id="stats"
-          className="relative overflow-hidden py-11 sm:py-14 lg:py-20"
+          className="relative overflow-hidden py-8 sm:py-11 lg:py-16"
           style={t.sectionBg?.['stats'] ? { backgroundColor: t.sectionBg['stats'] } : deepStage}
         >
           <span className="lt-grain-layer" aria-hidden="true" />
@@ -2685,7 +2743,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             />
           )}
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading title={t.stats.title} subtitle={t.stats.subtitle} accent={c.accent} onDark className="mb-10" />
+            <SectionHeading title={t.stats.title} subtitle={t.stats.subtitle} accent={c.accent} onDark className="mb-7" />
             {isTrustRail ? (
               <div
                 className="lt-reveal grid grid-cols-1 gap-6 rounded-[16px] p-6 md:grid-cols-3 md:p-10"
@@ -2704,7 +2762,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 ))}
               </div>
             ) : (
-            <div className={`grid gap-5 lg:gap-6 grid-cols-1 sm:grid-cols-2 ${t.stats.stats.length >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
+            <div className={`grid gap-3.5 sm:gap-5 lg:gap-6 grid-cols-2 ${t.stats.stats.length >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
               {t.stats.stats.map((stat, i) => {
                 // Labels are used two ways across pages: short captions
                 // ("Students") and full sentences used as a checklist. Micro-caps
@@ -2735,7 +2793,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             </div>
             )}
             {hasContent(t.stats.ctaButtonText) && (
-              <div className="lt-reveal mt-10 text-center">
+              <div className="lt-reveal mt-8 text-center">
                 {t.stats.ctaButtonAction === "url" ? (
                   <a href={resolveLink(t.stats.ctaButtonLink)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
                     <span className="lt-cta-sheen" aria-hidden="true" />
@@ -2761,10 +2819,10 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         if (!fmt || !fmt.visible || formatsSlides.length === 0) return null;
         const activeSlide = formatsSlides[Math.min(currentFormatsSlide, formatsSlides.length - 1)];
         return (
-          <section id="formats" className="relative overflow-hidden py-11 sm:py-14 lg:py-16" style={t.sectionBg?.['formats'] ? { backgroundColor: t.sectionBg['formats'] } : deepStage}>
+          <section id="formats" className="relative overflow-hidden py-8 sm:py-11 lg:py-14" style={t.sectionBg?.['formats'] ? { backgroundColor: t.sectionBg['formats'] } : deepStage}>
             <span className="lt-grain-layer" aria-hidden="true" />
             <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={fmt.title} subtitle={fmt.subtitle} accent={c.accent} onDark className="mb-7 lg:mb-9" />
+              <SectionHeading title={fmt.title} subtitle={fmt.subtitle} accent={c.accent} onDark className="mb-5 lg:mb-7" />
               <div className="lt-reveal relative w-full overflow-hidden rounded-[28px]" style={{ aspectRatio: "1310 / 440", border: "1px solid rgba(255,255,255,0.16)", boxShadow: "0 40px 80px -30px rgba(0,0,0,.7)" }}>
                 {formatsSlides.map((slide, index) => (
                   <div
@@ -2855,9 +2913,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             WebkitMaskImage: "linear-gradient(to right, transparent, #000 8%, #000 92%, transparent)",
           };
           return (
-            <section id="testimonials" className="overflow-hidden py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('testimonials', c.bodyBg) }}>
+            <section id="testimonials" className="overflow-hidden py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('testimonials', c.bodyBg) }}>
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <SectionHeading title={t.testimonials.title} subtitle={t.testimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8 lg:mb-11" />
+                <SectionHeading title={t.testimonials.title} subtitle={t.testimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-9" />
               </div>
               <div className="lt-reveal flex flex-col gap-5">
                 <div className="lt-marquee-row overflow-hidden" style={maskStyle}>
@@ -2876,9 +2934,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         }
 
         return (
-        <section id="testimonials" className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('testimonials', c.bodyBg) }}>
+        <section id="testimonials" className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('testimonials', c.bodyBg) }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading title={t.testimonials.title} subtitle={t.testimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8 lg:mb-11" />
+            <SectionHeading title={t.testimonials.title} subtitle={t.testimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-9" />
             <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
               {t.testimonials.items.map((item, i) => (
                 <div
@@ -2940,9 +2998,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
       case 'videoTestimonials':
         return t.videoTestimonials.visible && t.videoTestimonials.items.length > 0 && (
-        <section className="py-11 sm:py-14 lg:py-20 overflow-hidden" style={{ backgroundColor: sbg('videoTestimonials', hexToRgba(c.secondary, 0.05)) }}>
+        <section className="py-8 sm:py-11 lg:py-16 overflow-hidden" style={{ backgroundColor: sbg('videoTestimonials', hexToRgba(c.secondary, 0.05)) }}>
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <SectionHeading title={t.videoTestimonials.title} subtitle={t.videoTestimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8" />
+            <SectionHeading title={t.videoTestimonials.title} subtitle={t.videoTestimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6" />
             <VideoTestimonialsSlider
               items={videoTestimonialItems}
               primaryColor={c.accent}
@@ -2953,14 +3011,14 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       
       case 'program':
         return t.program.visible && (
-      <section className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('program', hexToRgba(c.primary, 0.05)) }}>
+      <section className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('program', hexToRgba(c.primary, 0.05)) }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <SectionHeading title={t.program.title} subtitle={t.program.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8 lg:mb-11" />
+          <SectionHeading title={t.program.title} subtitle={t.program.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-9" />
           <div className="grid gap-5 lg:gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {t.program.points.map((point, i) => (
               <div
                 key={i}
-                className="lt-reveal lt-card group relative overflow-hidden rounded-[26px] p-7 sm:p-8"
+                className="lt-reveal lt-card group relative overflow-hidden rounded-[26px] p-5 text-left sm:p-7"
                 style={{
                   ["--lt-i" as string]: i,
                   backgroundColor: surface,
@@ -2975,19 +3033,23 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                   style={{ background: `radial-gradient(circle, ${hexToRgba(c.accent, 0.35)} 0%, transparent 70%)` }}
                 />
                 <div className="relative">
-                  <div
-                    className="flex h-14 w-14 items-center justify-center rounded-2xl transition-transform duration-500 group-hover:scale-110"
-                    style={{
-                      backgroundImage: `linear-gradient(135deg, ${hexToRgba(c.primary, 0.16)} 0%, ${hexToRgba(c.accent, 0.22)} 100%)`,
-                      border: `1px solid ${hexToRgba(c.accent, 0.28)}`,
-                    }}
-                  >
-                    <ProgramIcon name={point.icon} className="h-7 w-7" style={{ color: c.accent } as React.CSSProperties} />
+                  {/* Icon and title share a row; the description sits under
+                      both at full card width. */}
+                  <div className="flex items-center gap-3.5 sm:gap-4">
+                    <div
+                      className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl transition-transform duration-500 group-hover:scale-110 sm:h-14 sm:w-14"
+                      style={{
+                        backgroundImage: `linear-gradient(135deg, ${hexToRgba(c.primary, 0.16)} 0%, ${hexToRgba(c.accent, 0.22)} 100%)`,
+                        border: `1px solid ${hexToRgba(c.accent, 0.28)}`,
+                      }}
+                    >
+                      <ProgramIcon name={point.icon} className="h-6 w-6 sm:h-7 sm:w-7" style={{ color: c.accent } as React.CSSProperties} />
+                    </div>
+                    <h3 className="font-display min-w-0 flex-1 text-lg font-bold leading-snug sm:text-xl" style={{ color: ink }}>
+                      {point.title}
+                    </h3>
                   </div>
-                  <h3 className="font-display mt-6 text-xl sm:text-2xl font-bold leading-snug" style={{ color: ink }}>
-                    {point.title}
-                  </h3>
-                  <p className="font-body mt-3 text-sm sm:text-base leading-relaxed" style={{ color: muted }}>
+                  <p className="font-body mt-3.5 text-sm leading-relaxed sm:mt-4 sm:text-base" style={{ color: muted }}>
                     {point.description}
                   </p>
                 </div>
@@ -3018,13 +3080,13 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       case 'bonus':
         return t.bonus.enabled && t.bonus.items.length > 0 && (
         <section
-          className="relative overflow-hidden py-11 sm:py-14 lg:py-20"
+          className="relative overflow-hidden py-8 sm:py-11 lg:py-16"
           style={t.sectionBg?.['bonus'] ? { backgroundColor: t.sectionBg['bonus'] } : stage}
         >
           <span className="lt-grain-layer" aria-hidden="true" />
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading title={t.bonus.title} accent={c.accent} onDark className="mb-8 lg:mb-11" />
-            <div className={`grid gap-6 lg:gap-8 mx-auto ${t.bonus.items.length >= 3 ? "sm:grid-cols-2 lg:grid-cols-3 max-w-6xl" : "sm:grid-cols-2 max-w-4xl"}`}>
+            <SectionHeading title={t.bonus.title} accent={c.accent} onDark className="mb-6 lg:mb-9" />
+            <div className={`grid gap-4 sm:gap-6 lg:gap-8 mx-auto ${t.bonus.items.length >= 3 ? "sm:grid-cols-2 lg:grid-cols-3 max-w-6xl" : "sm:grid-cols-2 max-w-4xl"}`}>
               {t.bonus.items.map((item, i) => (
                 <div
                   key={i}
@@ -3073,7 +3135,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         const banner = t.appBanner;
         if (!banner || !banner.visible || !hasContent(banner.image)) return null;
         return (
-          <section id="appBanner" className="py-11 sm:py-14 lg:py-16" style={{ backgroundColor: sbg('appBanner', c.bodyBg) }}>
+          <section id="appBanner" className="py-8 sm:py-11 lg:py-14" style={{ backgroundColor: sbg('appBanner', c.bodyBg) }}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <a
                 href={resolveLink(banner.link)}
@@ -3092,7 +3154,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
       case 'invitation':
         return t.invitation.enabled && (
-        <section className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('invitation', hexToRgba(c.primary, 0.06)) }}>
+        <section className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('invitation', hexToRgba(c.primary, 0.06)) }}>
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
             <div className="lt-reveal relative overflow-hidden rounded-[32px] p-7 sm:p-10 lg:p-12" style={stage}>
               <span className="lt-grain-layer" aria-hidden="true" />
@@ -3147,7 +3209,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                   </div>
                 )}
 
-                <div className="mt-9 flex flex-col items-center gap-3">
+                <div className="mt-7 flex flex-col items-center gap-3">
                   {t.invitation.buttonAction === "url" ? (
                     <a
                       href={resolveLink(t.invitation.buttonLink)}
@@ -3185,6 +3247,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             onOpenChange={setInvitationDialogOpen}
             invitation={t.invitation}
             primaryColor={c.primary}
+            accentColor={c.accent}
             landingPageId={landingPageId}
             pageSlug={pageSlug}
             isPreviewMode={isPreviewMode}
@@ -3241,8 +3304,8 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             if (block.textFormat === "bullets") {
               const bullets = block.content.split('\n').filter(line => line.trim());
               return (
-                <div>
-                  <div className="lt-reveal mb-5 flex justify-center"><RitualRule color={c.accent} /></div>
+                <div className="text-center lg:text-left">
+                  <div className="lt-reveal mb-5 flex justify-center lg:justify-start"><RitualRule color={c.accent} /></div>
                   {block.heading && (
                     <h3
                       className="lt-reveal font-display text-[clamp(1.7rem,3.4vw,2.75rem)] font-bold leading-[1.1] tracking-[-0.02em]"
@@ -3251,11 +3314,11 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                       {block.heading}
                     </h3>
                   )}
-                  <ul className="mt-7 space-y-4">
+                  <ul className="mt-6 space-y-3.5 sm:mt-7 sm:space-y-4">
                     {bullets.map((bullet, i) => (
                       <li
                         key={i}
-                        className="lt-reveal flex items-start gap-3.5 font-body text-base sm:text-lg leading-relaxed"
+                        className="lt-reveal flex items-start justify-center gap-3 text-left font-body text-[15px] leading-relaxed sm:gap-3.5 sm:text-lg lg:justify-start"
                         style={{ ["--lt-i" as string]: i + 2, color: muted }}
                       >
                         <span
@@ -3273,8 +3336,8 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             } else {
               // plain text
               return (
-                <div>
-                  <div className="lt-reveal mb-5 flex justify-center"><RitualRule color={c.accent} /></div>
+                <div className="text-center lg:text-left">
+                  <div className="lt-reveal mb-5 flex justify-center lg:justify-start"><RitualRule color={c.accent} /></div>
                   {block.heading && (
                     <h3
                       className="lt-reveal font-display text-[clamp(1.7rem,3.4vw,2.75rem)] font-bold leading-[1.1] tracking-[-0.02em]"
@@ -3284,7 +3347,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                     </h3>
                   )}
                   <p
-                    className="lt-reveal font-body mt-6 text-base sm:text-lg leading-relaxed whitespace-pre-wrap"
+                    className="lt-reveal font-body mt-5 text-[15px] sm:text-lg leading-relaxed whitespace-pre-wrap sm:mt-6"
                     style={{ ["--lt-i" as string]: 2, color: muted }}
                   >
                     {block.content}
@@ -3297,7 +3360,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           return (
             <section
               key={`content-block-${blockIndex}`}
-              className="py-11 sm:py-14 lg:py-20"
+              className="py-8 sm:py-11 lg:py-16"
               style={{ backgroundColor: sbg(`contentBlock-${blockIndex}`, c.bodyBg) }}
             >
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -3377,9 +3440,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
       case 'faq':
         return t.faq?.enabled && t.faq.items.length > 0 && (
-          <section className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('faq', c.bodyBg) }}>
+          <section className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('faq', c.bodyBg) }}>
             <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={t.faq.title} subtitle={t.faq.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8" />
+              <SectionHeading title={t.faq.title} subtitle={t.faq.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6" />
               <div className="space-y-3">
                 {t.faq.items.map((item, i) => (
                   <div key={i} className="lt-reveal" style={{ ["--lt-i" as string]: i }}>
@@ -3423,7 +3486,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 bar.ctaAction === "url" ? (
                   <a
                     href={resolveLink(bar.ctaLink)}
-                    className="lt-focus inline-flex items-center rounded-full bg-white/95 px-3 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors hover:bg-white sm:text-xs"
+                    className="lt-bar-cta lt-focus inline-flex flex-shrink-0 items-center rounded-full bg-white/95 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide transition-colors hover:bg-white sm:px-3 sm:py-1 sm:text-xs"
                     style={{ color: c.secondary }}
                   >
                     {bar.ctaText}
@@ -3432,7 +3495,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                   <button
                     type="button"
                     onClick={() => setInvitationDialogOpen(true)}
-                    className="lt-focus inline-flex items-center rounded-full bg-white/95 px-3 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors hover:bg-white sm:text-xs"
+                    className="lt-bar-cta lt-focus inline-flex flex-shrink-0 items-center rounded-full bg-white/95 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide transition-colors hover:bg-white sm:px-3 sm:py-1 sm:text-xs"
                     style={{ color: c.secondary }}
                   >
                     {bar.ctaText}
@@ -3449,9 +3512,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         if (!ev?.visible) return null;
         const seats = Math.max(0, Math.min(100, ev.seatsFilledPercent || 0));
         return (
-          <section id="eventDetails" className="py-14 sm:py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('eventDetails', c.bodyBg) }}>
+          <section id="eventDetails" className="py-14 sm:py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('eventDetails', c.bodyBg) }}>
             <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={ev.title} subtitle={ev.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-7 lg:mb-9" />
+              <SectionHeading title={ev.title} subtitle={ev.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-5 lg:mb-7" />
               <div
                 className="lt-reveal overflow-hidden rounded-[26px] sm:rounded-[32px]"
                 style={{ backgroundColor: surface, border: `1px solid ${hairline}`, boxShadow: cardShadow }}
@@ -3473,7 +3536,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 {(ev.items || []).length > 0 && (
                   <div className="grid grid-cols-2 gap-x-4 gap-y-6 px-5 py-6 sm:grid-cols-4 sm:px-8 sm:py-8">
                     {(ev.items || []).map((item, i) => (
-                      <div key={i} className="flex flex-col items-start gap-2">
+                      <div key={i} className="flex flex-col items-center gap-2 text-center sm:items-start sm:text-left">
                         <span
                           className="flex h-9 w-9 items-center justify-center rounded-xl"
                           style={{ backgroundColor: hexToRgba(c.accent, 0.12) }}
@@ -3583,19 +3646,21 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         const impacts = (pr.impacts || []).filter(hasContent);
         if (items.length === 0 && impacts.length === 0) return null;
         return (
-          <section id="problems" className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('problems', c.bodyBg) }}>
+          <section id="problems" className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('problems', c.bodyBg) }}>
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={pr.title} subtitle={pr.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8 lg:mb-10" />
+              <SectionHeading title={pr.title} subtitle={pr.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-6" />
               {items.length > 0 && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
                   {items.map((item, i) => (
                     <div
                       key={i}
-                      className="lt-reveal lt-card flex gap-4 rounded-[22px] p-5 sm:p-6"
+                      // Stacks and centers on phones, goes back to an icon-beside-text
+                      // row from sm up.
+                      className="lt-reveal lt-card flex flex-col items-center gap-3 rounded-[22px] p-5 text-center sm:flex-row sm:items-start sm:gap-4 sm:p-6 sm:text-left"
                       style={{ ["--lt-i" as string]: i % 3, backgroundColor: surface, border: `1px solid ${hairline}`, boxShadow: cardShadow }}
                     >
                       <span
-                        className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl"
+                        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl sm:h-11 sm:w-11"
                         style={{ backgroundColor: hexToRgba(c.accent, 0.12) }}
                       >
                         <ProgramIcon name={item.icon} className="h-5 w-5" style={{ color: c.accent } as React.CSSProperties} />
@@ -3612,7 +3677,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
               )}
 
               {impacts.length > 0 && (
-                <div className="lt-reveal relative mt-9 overflow-hidden rounded-[26px] p-6 sm:mt-10 sm:rounded-[32px] sm:p-10" style={stage}>
+                <div className="lt-reveal relative mt-7 overflow-hidden rounded-[26px] p-6 sm:mt-10 sm:rounded-[32px] sm:p-10" style={stage}>
                   <span className="lt-grain-layer" aria-hidden="true" />
                   <div className="relative">
                     {hasContent(pr.impactTitle) && (
@@ -3648,9 +3713,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         if (modules.length === 0) return null;
         const asCards = cur.displayMode === "cards";
         return (
-          <section id="curriculum" className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('curriculum', c.bodyBg) }}>
+          <section id="curriculum" className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('curriculum', c.bodyBg) }}>
             <div className={`mx-auto px-4 sm:px-6 lg:px-8 ${asCards ? "max-w-7xl" : "max-w-3xl"}`}>
-              <SectionHeading title={cur.title} subtitle={cur.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8" />
+              <SectionHeading title={cur.title} subtitle={cur.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6" />
               {asCards ? (
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
                   {modules.map((m, i) => (
@@ -3680,7 +3745,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                         {(m.bullets || []).filter(hasContent).length > 0 && (
                           <ul className="mt-4 space-y-2">
                             {(m.bullets || []).filter(hasContent).map((b, j) => (
-                              <li key={j} className="flex gap-2.5">
+                              <li key={j} className="flex justify-center gap-2.5 text-left sm:justify-start">
                                 <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" style={{ color: c.accent }} />
                                 <span className="font-body text-sm leading-relaxed" style={{ color: muted }}>{b}</span>
                               </li>
@@ -3710,7 +3775,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 </div>
               )}
               {hasContent(cur.ctaButtonText) && (
-                <div className="lt-reveal mt-9 text-center">
+                <div className="lt-reveal mt-7 text-center">
                   {cur.ctaButtonAction === "url" ? (
                     <a href={resolveLink(cur.ctaButtonLink)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
                       <span className="lt-cta-sheen" aria-hidden="true" />
@@ -3739,12 +3804,12 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         return (
           <section
             id="pricing"
-            className="relative overflow-hidden py-11 sm:py-14 lg:py-20"
+            className="relative overflow-hidden py-8 sm:py-11 lg:py-16"
             style={t.sectionBg?.['pricing'] ? { backgroundColor: t.sectionBg['pricing'] } : stage}
           >
             <span className="lt-grain-layer" aria-hidden="true" />
             <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={pricing.title} subtitle={pricing.subtitle} accent={c.accent} onDark className="mb-8 lg:mb-11" />
+              <SectionHeading title={pricing.title} subtitle={pricing.subtitle} accent={c.accent} onDark className="mb-6 lg:mb-9" />
               <div
                 className={`grid grid-cols-1 gap-5 sm:gap-6 ${tiers.length >= 3 ? "lg:grid-cols-3" : tiers.length === 2 ? "sm:grid-cols-2 lg:max-w-4xl lg:mx-auto" : "max-w-md mx-auto"}`}
               >
@@ -3753,7 +3818,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                   return (
                     <div
                       key={i}
-                      className={`lt-reveal lt-card relative flex flex-col rounded-[26px] p-6 sm:p-8 ${hot ? "lg:-mt-4 lg:mb-4" : ""}`}
+                      className={`lt-reveal lt-card relative flex flex-col rounded-[26px] p-5 text-center sm:p-7 sm:text-left ${hot ? "lg:-mt-4 lg:mb-4" : ""}`}
                       style={{
                         ["--lt-i" as string]: i,
                         backgroundColor: hot ? "#FFFFFF" : "rgba(255,255,255,0.06)",
@@ -3764,7 +3829,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                     >
                       {hasContent(tier.badge) && (
                         <span
-                          className="font-body absolute -top-3 left-6 inline-flex items-center rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white"
+                          className="font-body absolute -top-3 left-1/2 -translate-x-1/2 inline-flex sm:left-6 sm:translate-x-0 items-center rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white"
                           style={{ backgroundImage: `linear-gradient(135deg, ${c.accent}, ${c.primary})` }}
                         >
                           {tier.badge}
@@ -3776,7 +3841,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                       >
                         {tier.name}
                       </h3>
-                      <div className="mt-3 flex flex-wrap items-baseline gap-2">
+                      <div className="mt-3 flex flex-wrap items-baseline justify-center gap-2 sm:justify-start">
                         <span
                           className="font-display text-4xl font-bold leading-none"
                           style={{ color: hot ? "#111827" : "#FFFFFF" }}
@@ -3802,7 +3867,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                       <div className="my-6 h-px w-full" style={{ backgroundColor: hot ? "rgba(17,24,39,0.08)" : "rgba(255,255,255,0.12)" }} />
                       <ul className="flex-1 space-y-3">
                         {(tier.features || []).filter(hasContent).map((f, j) => (
-                          <li key={j} className="flex gap-2.5">
+                          <li key={j} className="flex justify-center gap-2.5 text-left sm:justify-start">
                             <span
                               className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full"
                               style={{ backgroundColor: hexToRgba(c.accent, hot ? 0.16 : 0.3) }}
@@ -3867,9 +3932,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           return <span className="font-body text-xs sm:text-sm" style={{ color: muted }}>{value}</span>;
         };
         return (
-          <section id="comparison" className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('comparison', c.bodyBg) }}>
+          <section id="comparison" className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('comparison', c.bodyBg) }}>
             <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={cmp.title} subtitle={cmp.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8" />
+              <SectionHeading title={cmp.title} subtitle={cmp.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6" />
               {/* Wide table scrolls inside its own box so the page body never
                   scrolls sideways on a phone. The hint below only shows at the
                   widths where the table actually overflows. */}
@@ -3877,7 +3942,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 Swipe the table sideways to compare →
               </p>
               <div
-                className="lt-reveal overflow-x-auto rounded-[22px]"
+                className="lt-reveal touch-pan-x overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-[22px]"
                 style={{ backgroundColor: surface, border: `1px solid ${hairline}`, boxShadow: cardShadow }}
               >
                 <table className="w-full min-w-[520px] border-collapse">
@@ -3935,12 +4000,12 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         return (
           <section
             id="guarantee"
-            className="relative overflow-hidden py-11 sm:py-14 lg:py-20"
+            className="relative overflow-hidden py-8 sm:py-11 lg:py-16"
             style={t.sectionBg?.['guarantee'] ? { backgroundColor: t.sectionBg['guarantee'] } : deepStage}
           >
             <span className="lt-grain-layer" aria-hidden="true" />
             <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={g.title} subtitle={g.subtitle} accent={c.accent} onDark className="mb-8 lg:mb-10" />
+              <SectionHeading title={g.title} subtitle={g.subtitle} accent={c.accent} onDark className="mb-6 lg:mb-6" />
               <div className={`grid grid-cols-1 gap-5 sm:gap-6 ${items.length >= 3 ? "md:grid-cols-3" : "sm:grid-cols-2"}`}>
                 {items.map((item, i) => (
                   <div
@@ -3995,7 +4060,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           style={{ background: `radial-gradient(circle, ${hexToRgba(c.accent, 0.32)} 0%, transparent 70%)` }}
         />
         {/* Closing CTA */}
-        <div className="relative py-14 sm:py-16 lg:py-20 text-center">
+        <div className="relative py-10 sm:py-12 lg:py-16 text-center">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="lt-reveal mb-6 flex justify-center"><RitualRule color={c.accent} /></div>
             <h2
@@ -4171,6 +4236,32 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         @keyframes lt-sheen { 0% { transform: translateX(-130%) skewX(-18deg); } 55%, 100% { transform: translateX(240%) skewX(-18deg); } }
         @keyframes lt-marquee-l { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         @keyframes lt-marquee-r { 0% { transform: translateX(-50%); } 100% { transform: translateX(0); } }
+        /* Stage aura blooms wander and swell. Position alone was far too subtle
+           to read at these sizes, so each layer also scales — that swell is what
+           actually makes the light look alive. Each layer runs its own path so
+           they never move as one sheet. */
+        @keyframes lt-stage-drift {
+          0% {
+            background-position: 0% 0%, 100% 0%, 50% 100%;
+            background-size: 150% 150%, 140% 140%, 160% 160%;
+          }
+          25% {
+            background-position: 72% 28%, 28% 62%, 18% 58%;
+            background-size: 210% 210%, 195% 195%, 145% 145%;
+          }
+          50% {
+            background-position: 100% 82%, 0% 100%, 92% 18%;
+            background-size: 160% 160%, 230% 230%, 205% 205%;
+          }
+          75% {
+            background-position: 28% 100%, 82% 18%, 62% 92%;
+            background-size: 225% 225%, 150% 150%, 175% 175%;
+          }
+          100% {
+            background-position: 0% 0%, 100% 0%, 50% 100%;
+            background-size: 150% 150%, 140% 140%, 160% 160%;
+          }
+        }
         @keyframes lt-proof-pop { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
         .lt-proof-pop { animation: lt-proof-pop .5s cubic-bezier(.16,1,.3,1) both; }
 
@@ -4196,7 +4287,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
            icon buttons and carousel dots. Inline text links get their padding
            from .lt-taplink instead. */
         @media (hover: none) and (pointer: coarse) {
-          .lt-cta, button.lt-focus { min-height: 44px; }
+          .lt-cta, button.lt-focus:not(.lt-bar-cta) { min-height: 44px; }
         }
         /* Footer/nav text links: padded to a comfortable target without
            changing the visual rhythm (negative margin absorbs the padding). */
