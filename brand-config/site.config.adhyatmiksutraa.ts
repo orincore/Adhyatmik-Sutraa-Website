@@ -1,4 +1,7 @@
 import type { SiteConfig } from "./site-config.types";
+// Palette lives in a plain .mjs module so tailwind.config.ts can read it too
+// without tripping Turbopack's PostCSS-stage resolver — see brand-colors.mjs.
+import { adhyatmiksutraaColors } from "./brand-colors.mjs";
 
 /**
  * Adhyatmiksutraa's brand config, extracted from the live site
@@ -27,20 +30,7 @@ export const adhyatmiksutraa: SiteConfig = {
     footer: "/assets/footer_logo.png",
     // No ISO/certification badge on the source site — leave unset to hide it.
   },
-  colors: {
-    // Extracted from the live site's Elementor global color palette (post-8.css).
-    primary: "#7B3F7A",
-    secondary: "#35093C",
-    peacock: "#7B3F7A",
-    earth: "#D5D4C0",
-    sand: "#EEC6BC",
-    accent: "#FD4380",
-    support: "#7675B9",
-    cta: "#FD4380",
-    cream: "#EEC6BC",
-    warm: "#D89E2E",
-    dark: "#240429",
-  },
+  colors: adhyatmiksutraaColors,
   contact: {
     // Footer (site-wide) pair — treated as the authoritative one.
     supportEmail: "adhyatmiksutraaonline@gmail.com",

@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CalendarDays, Clock3, MapPin, CheckCircle2, ChevronLeft, ChevronRight, Zap, Radio, FlaskConical, BookOpen, Star, Heart, Leaf, Sun, Moon, Sparkles, Target, Trophy, Users, Brain, Lightbulb, Shield, Flame, Gem, Music, Globe, Camera, Smile, Coffee, Rocket, Award, MessageSquare, Lock, GripVertical, ArrowUp, ArrowDown, Eye, EyeOff, Settings2, Plus, Copy, Trash2, Instagram, Facebook, Youtube, Linkedin, Twitter, MessageCircle } from "lucide-react";
+import { CalendarDays, Clock3, MapPin, CheckCircle2, ChevronLeft, ChevronRight, Zap, Radio, FlaskConical, BookOpen, Star, Heart, Leaf, Sun, Moon, Sparkles, Target, Trophy, Users, Brain, Lightbulb, Shield, Flame, Gem, Music, Globe, Camera, Smile, Coffee, Rocket, Award, MessageSquare, Lock, GripVertical, ArrowUp, ArrowDown, Eye, EyeOff, Settings2, Plus, Copy, Trash2, Instagram, Facebook, Youtube, Linkedin, Twitter, MessageCircle, Hourglass, Languages, ShieldCheck, RefreshCcw, BadgeCheck, Wallet, TrendingUp, AlertTriangle, Video, Gift, PlayCircle, CircleDollarSign, Frown, CloudRain, Ban, Infinity as InfinityIcon, Headphones, Ticket, Check, X } from "lucide-react";
 import { DynamicPageRenderer } from "@/components/storefront/dynamic-page-renderer";
 
 // Icon resolver for why-section cards
@@ -33,6 +33,10 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Zap, Radio, FlaskConical, BookOpen, Star, Heart, Leaf, Sun, Moon, Sparkles,
   Target, Trophy, Users, Brain, Lightbulb, Shield, Flame, Gem, Music, Globe,
   Camera, Smile, Coffee, Rocket, Award, CheckCircle2, CalendarDays, Clock3,
+  // Added for the conversion sections (event details, problems, guarantee)
+  Hourglass, Languages, ShieldCheck, RefreshCcw, BadgeCheck, Wallet, TrendingUp,
+  AlertTriangle, Video, Gift, PlayCircle, CircleDollarSign, Frown, CloudRain,
+  Ban, Infinity: InfinityIcon, Headphones, Ticket, MapPin,
 };
 function ProgramIcon({ name, className, style }: { name?: string; className?: string; style?: React.CSSProperties }) {
   const Icon = name ? (ICON_MAP[name] ?? Sparkles) : Sparkles;
@@ -269,6 +273,283 @@ function FaqItem({
             {item.answer}
           </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Countdown — live timer to an ISO instant.
+// Renders nothing until mounted, so the server-rendered HTML and the first
+// client render always agree (the remaining time differs between them by
+// definition, which would otherwise be a hydration mismatch).
+// ---------------------------------------------------------------------------
+function useCountdown(target?: string) {
+  const [remaining, setRemaining] = useState<number | null>(null);
+  useEffect(() => {
+    if (!target) return;
+    const end = new Date(target).getTime();
+    if (Number.isNaN(end)) return;
+    const tick = () => setRemaining(Math.max(0, end - Date.now()));
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [target]);
+  if (remaining === null) return null;
+  const totalSeconds = Math.floor(remaining / 1000);
+  return {
+    days: Math.floor(totalSeconds / 86400),
+    hours: Math.floor((totalSeconds % 86400) / 3600),
+    minutes: Math.floor((totalSeconds % 3600) / 60),
+    seconds: totalSeconds % 60,
+    expired: remaining <= 0,
+  };
+}
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+function Countdown({
+  target,
+  label,
+  variant = "boxed",
+  accent,
+  onDark = true,
+}: {
+  target?: string;
+  label?: string;
+  variant?: "inline" | "boxed";
+  accent: string;
+  onDark?: boolean;
+}) {
+  const time = useCountdown(target);
+  if (!time) return null;
+
+  const parts = [
+    ...(time.days > 0 ? [{ value: time.days, unit: "Days" }] : []),
+    { value: time.hours, unit: "Hrs" },
+    { value: time.minutes, unit: "Min" },
+    { value: time.seconds, unit: "Sec" },
+  ];
+
+  if (variant === "inline") {
+    return (
+      <span className="inline-flex items-center gap-1.5 font-body text-xs font-semibold tabular-nums sm:text-sm">
+        {hasContent(label) && <span className="opacity-80">{label}</span>}
+        <span className="inline-flex items-center gap-1">
+          {parts.map((p, i) => (
+            <React.Fragment key={p.unit}>
+              {i > 0 && <span className="opacity-50">:</span>}
+              <span className="rounded-md px-1.5 py-0.5" style={{ backgroundColor: "rgba(0,0,0,0.22)" }}>
+                {pad2(p.value)}
+              </span>
+            </React.Fragment>
+          ))}
+        </span>
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      {hasContent(label) && (
+        <span
+          className="font-body text-[11px] font-semibold uppercase tracking-[0.22em]"
+          style={{ color: onDark ? "rgba(255,255,255,0.66)" : "#6B7280" }}
+        >
+          {label}
+        </span>
+      )}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {parts.map((p) => (
+          <div
+            key={p.unit}
+            className="flex min-w-[58px] flex-col items-center rounded-2xl px-2.5 py-2.5 sm:min-w-[74px] sm:px-4 sm:py-3"
+            style={{
+              backgroundColor: onDark ? "rgba(255,255,255,0.08)" : "#FFFFFF",
+              border: `1px solid ${onDark ? "rgba(255,255,255,0.16)" : hexToRgba(accent, 0.22)}`,
+              boxShadow: onDark ? "none" : "0 12px 30px -22px rgba(17,24,39,.45)",
+            }}
+          >
+            <span
+              className="font-display text-2xl font-bold leading-none tabular-nums sm:text-3xl"
+              style={{ color: onDark ? "#fff" : "#111827" }}
+            >
+              {pad2(p.value)}
+            </span>
+            <span
+              className="font-body mt-1 text-[9px] font-semibold uppercase tracking-[0.16em] sm:text-[10px]"
+              style={{ color: onDark ? "rgba(255,255,255,0.55)" : "#6B7280" }}
+            >
+              {p.unit}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Curriculum accordion row — numbered, expands to a bullet list.
+// ---------------------------------------------------------------------------
+function CurriculumRow({
+  module,
+  index,
+  defaultOpen,
+  accent,
+  ink,
+  muted,
+  surface,
+  hairline,
+}: {
+  module: { label: string; title: string; description?: string; bullets: string[] };
+  index: number;
+  defaultOpen: boolean;
+  accent: string;
+  ink: string;
+  muted: string;
+  surface: string;
+  hairline: string;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div
+      className="overflow-hidden rounded-2xl transition-colors duration-300"
+      style={{ backgroundColor: surface, border: `1px solid ${open ? hexToRgba(accent, 0.35) : hairline}` }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="lt-focus flex w-full items-center gap-3 px-4 py-4 text-left sm:gap-4 sm:px-6 sm:py-5"
+      >
+        <span
+          className="font-display flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-sm font-bold sm:h-11 sm:w-11 sm:text-base"
+          style={{ backgroundColor: hexToRgba(accent, 0.14), color: accent }}
+        >
+          {pad2(index + 1)}
+        </span>
+        <span className="min-w-0 flex-1">
+          {hasContent(module.label) && (
+            <span
+              className="font-body block text-[10px] font-semibold uppercase tracking-[0.2em]"
+              style={{ color: accent }}
+            >
+              {module.label}
+            </span>
+          )}
+          <span className="font-body mt-0.5 block text-sm font-semibold sm:text-base" style={{ color: ink }}>
+            {module.title}
+          </span>
+        </span>
+        <span
+          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full transition-all duration-300"
+          style={{
+            backgroundColor: open ? accent : hexToRgba(accent, 0.1),
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+          }}
+        >
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke={open ? "#fff" : accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </span>
+      </button>
+      <div
+        className="grid transition-all duration-500 ease-[cubic-bezier(.16,1,.3,1)]"
+        style={{ gridTemplateRows: open ? "1fr" : "0fr", opacity: open ? 1 : 0 }}
+      >
+        <div className="overflow-hidden">
+          <div className="px-4 pb-5 pl-[3.25rem] sm:px-6 sm:pl-[4.75rem]">
+            {hasContent(module.description) && (
+              <p className="font-body mb-3 text-sm leading-relaxed" style={{ color: muted }}>
+                {module.description}
+              </p>
+            )}
+            <ul className="space-y-2.5">
+              {(module.bullets || []).filter(hasContent).map((b, i) => (
+                <li key={i} className="flex gap-2.5">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" style={{ color: accent }} />
+                  <span className="font-body text-sm leading-relaxed" style={{ color: muted }}>{b}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Live social-proof toast — rotates through recent-signup notices in a corner
+// card. Dismissible, and it sits above the sticky CTA bar on small screens.
+// ---------------------------------------------------------------------------
+function LiveProofToast({
+  items,
+  intervalMs = 5000,
+  accent,
+}: {
+  items: { text: string; meta?: string; image?: string }[];
+  intervalMs?: number;
+  accent: string;
+}) {
+  const [index, setIndex] = useState(0);
+  const [dismissed, setDismissed] = useState(false);
+  // Delays the first appearance so it doesn't fight the hero for attention,
+  // and keeps SSR output free of the toast entirely.
+  const [shown, setShown] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setShown(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (items.length <= 1) return;
+    const timer = setInterval(
+      () => setIndex((p) => (p + 1) % items.length),
+      Math.max(intervalMs, 2500)
+    );
+    return () => clearInterval(timer);
+  }, [items.length, intervalMs]);
+
+  if (dismissed || !shown || items.length === 0) return null;
+  const item = items[index % items.length];
+
+  return (
+    // Deliberately narrow on phones and tucked just above the docked CTA bar —
+    // a full-width toast here sits over the middle of the screen and blocks
+    // whatever the reader is actually looking at.
+    <div className="pointer-events-none fixed bottom-[76px] left-2.5 z-30 w-[268px] sm:bottom-6 sm:left-6 sm:w-auto sm:max-w-sm">
+      <div
+        key={index}
+        className="lt-proof-pop pointer-events-auto flex items-center gap-2.5 rounded-2xl bg-white/95 px-2.5 py-2 shadow-2xl backdrop-blur sm:gap-3 sm:px-4 sm:py-3"
+        style={{ border: `1px solid ${hexToRgba(accent, 0.2)}` }}
+      >
+        {hasContent(item.image) ? (
+          <img src={item.image} alt="" className="h-7 w-7 flex-shrink-0 rounded-full object-cover sm:h-9 sm:w-9" />
+        ) : (
+          <span
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9"
+            style={{ backgroundColor: hexToRgba(accent, 0.12) }}
+          >
+            <BadgeCheck className="h-4 w-4" style={{ color: accent }} />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="font-body line-clamp-2 text-[11px] font-semibold leading-snug text-gray-900 sm:text-[13px]">{item.text}</p>
+          {hasContent(item.meta) && (
+            <p className="font-body mt-0.5 text-[9.5px] text-gray-500 sm:text-[11px]">{item.meta}</p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          aria-label="Dismiss notification"
+          className="lt-focus -mr-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-gray-400 hover:text-gray-700 sm:h-7 sm:w-7"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
       </div>
     </div>
   );
@@ -533,18 +814,24 @@ function VideoTestimonialsSlider({ items, primaryColor }: {
 
       {/* Dot indicators mapped to real items */}
       {n > 1 && (
-        <div className="flex justify-center gap-1.5 mt-5">
+        <div className="flex justify-center mt-2">
           {items.map((_, i) => (
             <button
               key={i}
               type="button"
               onClick={() => { jumpTo(n + i); setActiveIdx(n + i); }}
-              className="h-2 rounded-full transition-all duration-300"
-              style={{
-                width: i === realActive ? 24 : 8,
-                backgroundColor: i === realActive ? primaryColor : "#d1d5db",
-              }}
-            />
+              aria-label={`Go to testimonial ${i + 1}`}
+              aria-current={i === realActive}
+              className="lt-focus flex h-11 w-7 items-center justify-center"
+            >
+              <span
+                className="block h-2 rounded-full transition-all duration-300"
+                style={{
+                  width: i === realActive ? 24 : 8,
+                  backgroundColor: i === realActive ? primaryColor : "#d1d5db",
+                }}
+              />
+            </button>
           ))}
         </div>
       )}
@@ -1644,6 +1931,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
     return () => observer.disconnect();
   }, [isEditorMode, orderSignature]);
 
+  const isCheckoutBar = t.floatingButton?.variant === "bar";
+  const floatingOnDesktop = !!t.floatingButton?.showOnDesktop;
+
   const floatingButtonProps: FloatingButtonRenderProps | null = (() => {
     if (!t.floatingButton?.enabled) return null;
     switch (t.floatingButton.section) {
@@ -1776,28 +2066,36 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           <>
             <button
               type="button"
-              className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 text-gray-900 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition"
+              className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 text-gray-900 flex items-center justify-center shadow-lg opacity-70 transition md:opacity-0 md:group-hover:opacity-100"
               onClick={() => handleHeroSlideChange("prev")}
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
             <button
               type="button"
-              className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 text-gray-900 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition"
+              className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/80 text-gray-900 flex items-center justify-center shadow-lg opacity-70 transition md:opacity-0 md:group-hover:opacity-100"
               onClick={() => handleHeroSlideChange("next")}
             >
               <ChevronRight className="h-5 w-5" />
             </button>
-            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2">
+            {/* The visible dot stays small; the button around it is padded out
+                to a finger-sized hit area. */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center">
               {heroSlides.map((_, index) => (
                 <button
                   key={`dot-${index}`}
                   type="button"
+                  aria-label={`Go to slide ${index + 1}`}
+                  aria-current={index === currentHeroSlide}
                   onClick={() => setCurrentHeroSlide(index)}
-                  className={`h-2.5 rounded-full transition-all ${
-                    index === currentHeroSlide ? "w-8 bg-white" : "w-2 bg-white/60"
-                  }`}
-                />
+                  className="lt-focus flex h-11 w-7 items-center justify-center"
+                >
+                  <span
+                    className={`block h-2.5 rounded-full transition-all ${
+                      index === currentHeroSlide ? "w-8 bg-white" : "w-2 bg-white/60"
+                    }`}
+                  />
+                </button>
               ))}
             </div>
           </>
@@ -1959,7 +2257,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 >
                   {t.hero.headline}{" "}
                   {hasContent(t.hero.highlightedWord) && (
-                    <span className="relative inline-block whitespace-nowrap">
+                    <span className="relative inline-block sm:whitespace-nowrap">
                       <span style={{ color: c.accent, textShadow: `0 0 38px ${hexToRgba(c.accent, 0.5)}` }}>
                         {t.hero.highlightedWord}
                       </span>
@@ -2010,7 +2308,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
         return (
             <section
-              className="relative overflow-hidden px-4 sm:px-6 lg:px-8 pt-14 pb-16 sm:pt-20 sm:pb-24"
+              className="relative overflow-hidden px-4 sm:px-6 lg:px-8 pt-10 pb-12 sm:pt-14 sm:pb-16 lg:pt-16 lg:pb-20"
               style={heroBg}
             >
               <span className="lt-grain-layer" aria-hidden="true" />
@@ -2042,7 +2340,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 >
                   {t.hero.headline}{" "}
                   {hasContent(t.hero.highlightedWord) && (
-                    <span className="relative inline-block whitespace-nowrap">
+                    <span className="relative inline-block sm:whitespace-nowrap">
                       <span style={{ color: c.accent, textShadow: `0 0 38px ${hexToRgba(c.accent, 0.5)}` }}>
                         {t.hero.highlightedWord}
                       </span>
@@ -2139,7 +2437,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           const reverse = t.why.imageSide === "right";
           const images = t.why.points.slice(0, 6);
           return (
-            <section className="relative overflow-hidden py-16 lg:py-20" style={t.sectionBg?.['why'] ? { backgroundColor: t.sectionBg['why'] } : deepStage}>
+            <section className="relative overflow-hidden py-11 sm:py-14 lg:py-16" style={t.sectionBg?.['why'] ? { backgroundColor: t.sectionBg['why'] } : deepStage}>
               <span className="lt-grain-layer" aria-hidden="true" />
               <div className={`relative mx-auto flex max-w-7xl flex-col items-center gap-10 px-4 sm:px-6 lg:gap-16 lg:px-8 ${reverse ? "lg:flex-row-reverse" : "lg:flex-row"}`}>
                 <div className="grid w-full max-w-[560px] grid-cols-3 gap-3 lg:gap-5">
@@ -2165,9 +2463,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         }
 
         return (
-        <section className="py-16 lg:py-24" style={{ backgroundColor: sbg('why', c.bodyBg) }}>
+        <section className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('why', c.bodyBg) }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading title={t.why.title} subtitle={t.why.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-12 lg:mb-16" />
+            <SectionHeading title={t.why.title} subtitle={t.why.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8 lg:mb-11" />
             <div className="grid gap-6 lg:gap-7 sm:grid-cols-2 lg:grid-cols-3">
               {t.why.points.map((point, i) => {
                 const pointMedia = renderMedia(point.image, mediaKey("why", "points", i, "image"), {
@@ -2187,7 +2485,11 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 >
                   {pointMedia && <div className="h-56 overflow-hidden">{pointMedia}</div>}
                   <div className="p-7">
-                    <RitualRule color={c.accent} className="mb-4" />
+                    {/* RitualRule is an inline-flex atom, so it needs a flex
+                        parent to center — on its own it hugs the left edge. */}
+                    <div className="mb-4 flex justify-center">
+                      <RitualRule color={c.accent} />
+                    </div>
                     <h3 className="font-display text-xl sm:text-2xl font-bold leading-snug" style={{ color: ink }}>
                       {point.title}
                     </h3>
@@ -2205,7 +2507,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
       case 'about':
         return t.about.visible && (
-        <section className="py-16 lg:py-24" style={{ backgroundColor: sbg('about', hexToRgba(c.primary, 0.05)) }}>
+        <section className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('about', hexToRgba(c.primary, 0.05)) }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-12 lg:gap-16 items-center">
               <div className="lt-reveal relative mx-auto w-full max-w-sm">
@@ -2267,10 +2569,10 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         const rail = t.guidesRail;
         if (!rail || !rail.visible || rail.items.length === 0) return null;
         return (
-          <section id="guidesRail" className="relative overflow-hidden py-16 lg:py-20" style={t.sectionBg?.['guidesRail'] ? { backgroundColor: t.sectionBg['guidesRail'] } : deepStage}>
+          <section id="guidesRail" className="relative overflow-hidden py-11 sm:py-14 lg:py-16" style={t.sectionBg?.['guidesRail'] ? { backgroundColor: t.sectionBg['guidesRail'] } : deepStage}>
             <span className="lt-grain-layer" aria-hidden="true" />
             <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={rail.title} subtitle={rail.subtitle} accent={c.accent} onDark className="mb-10 lg:mb-12" />
+              <SectionHeading title={rail.title} subtitle={rail.subtitle} accent={c.accent} onDark className="mb-7 lg:mb-9" />
             </div>
             <div className="relative mt-2 flex gap-5 overflow-x-auto scrollbar-hide px-4 sm:px-6 lg:px-20 pb-2">
               {rail.items.map((person, i) => (
@@ -2340,9 +2642,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       
       case 'gallery':
         return t.gallery.visible && t.gallery.images.length > 0 && (
-        <section className="py-16 lg:py-24" style={{ backgroundColor: sbg('gallery', c.bodyBg) }}>
+        <section className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('gallery', c.bodyBg) }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading title={t.gallery.title} subtitle={t.gallery.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-12" />
+            <SectionHeading title={t.gallery.title} subtitle={t.gallery.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8" />
             <div className="flex flex-wrap justify-center gap-4">
               {t.gallery.images.map((img, i) => (
                 <div
@@ -2372,7 +2674,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         return (
         <section
           id="stats"
-          className="relative overflow-hidden py-16 lg:py-24"
+          className="relative overflow-hidden py-11 sm:py-14 lg:py-20"
           style={t.sectionBg?.['stats'] ? { backgroundColor: t.sectionBg['stats'] } : deepStage}
         >
           <span className="lt-grain-layer" aria-hidden="true" />
@@ -2383,7 +2685,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             />
           )}
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading title={t.stats.title} subtitle={t.stats.subtitle} accent={c.accent} onDark className="mb-14" />
+            <SectionHeading title={t.stats.title} subtitle={t.stats.subtitle} accent={c.accent} onDark className="mb-10" />
             {isTrustRail ? (
               <div
                 className="lt-reveal grid grid-cols-1 gap-6 rounded-[16px] p-6 md:grid-cols-3 md:p-10"
@@ -2433,7 +2735,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             </div>
             )}
             {hasContent(t.stats.ctaButtonText) && (
-              <div className="lt-reveal mt-14 text-center">
+              <div className="lt-reveal mt-10 text-center">
                 {t.stats.ctaButtonAction === "url" ? (
                   <a href={resolveLink(t.stats.ctaButtonLink)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
                     <span className="lt-cta-sheen" aria-hidden="true" />
@@ -2459,10 +2761,10 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         if (!fmt || !fmt.visible || formatsSlides.length === 0) return null;
         const activeSlide = formatsSlides[Math.min(currentFormatsSlide, formatsSlides.length - 1)];
         return (
-          <section id="formats" className="relative overflow-hidden py-16 lg:py-20" style={t.sectionBg?.['formats'] ? { backgroundColor: t.sectionBg['formats'] } : deepStage}>
+          <section id="formats" className="relative overflow-hidden py-11 sm:py-14 lg:py-16" style={t.sectionBg?.['formats'] ? { backgroundColor: t.sectionBg['formats'] } : deepStage}>
             <span className="lt-grain-layer" aria-hidden="true" />
             <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={fmt.title} subtitle={fmt.subtitle} accent={c.accent} onDark className="mb-10 lg:mb-12" />
+              <SectionHeading title={fmt.title} subtitle={fmt.subtitle} accent={c.accent} onDark className="mb-7 lg:mb-9" />
               <div className="lt-reveal relative w-full overflow-hidden rounded-[28px]" style={{ aspectRatio: "1310 / 440", border: "1px solid rgba(255,255,255,0.16)", boxShadow: "0 40px 80px -30px rgba(0,0,0,.7)" }}>
                 {formatsSlides.map((slide, index) => (
                   <div
@@ -2479,19 +2781,24 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 ))}
               </div>
               {formatsSlides.length > 1 && (
-                <div className="mt-6 flex items-center justify-center gap-2">
+                <div className="mt-3 flex items-center justify-center">
                   {formatsSlides.map((_, index) => (
                     <button
                       key={`formats-dot-${index}`}
                       type="button"
                       onClick={() => setCurrentFormatsSlide(index)}
                       aria-label={`Go to slide ${index + 1}`}
-                      className="h-2 rounded-full transition-all duration-300"
-                      style={{
-                        width: index === currentFormatsSlide ? 24 : 8,
-                        backgroundColor: index === currentFormatsSlide ? c.accent : "rgba(255,255,255,0.3)",
-                      }}
-                    />
+                      aria-current={index === currentFormatsSlide}
+                      className="lt-focus flex h-11 w-7 items-center justify-center"
+                    >
+                      <span
+                        className="block h-2 rounded-full transition-all duration-300"
+                        style={{
+                          width: index === currentFormatsSlide ? 24 : 8,
+                          backgroundColor: index === currentFormatsSlide ? c.accent : "rgba(255,255,255,0.3)",
+                        }}
+                      />
+                    </button>
                   ))}
                 </div>
               )}
@@ -2548,9 +2855,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             WebkitMaskImage: "linear-gradient(to right, transparent, #000 8%, #000 92%, transparent)",
           };
           return (
-            <section id="testimonials" className="overflow-hidden py-16 lg:py-24" style={{ backgroundColor: sbg('testimonials', c.bodyBg) }}>
+            <section id="testimonials" className="overflow-hidden py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('testimonials', c.bodyBg) }}>
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <SectionHeading title={t.testimonials.title} subtitle={t.testimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-12 lg:mb-16" />
+                <SectionHeading title={t.testimonials.title} subtitle={t.testimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8 lg:mb-11" />
               </div>
               <div className="lt-reveal flex flex-col gap-5">
                 <div className="lt-marquee-row overflow-hidden" style={maskStyle}>
@@ -2569,9 +2876,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         }
 
         return (
-        <section id="testimonials" className="py-16 lg:py-24" style={{ backgroundColor: sbg('testimonials', c.bodyBg) }}>
+        <section id="testimonials" className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('testimonials', c.bodyBg) }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading title={t.testimonials.title} subtitle={t.testimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-12 lg:mb-16" />
+            <SectionHeading title={t.testimonials.title} subtitle={t.testimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8 lg:mb-11" />
             <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
               {t.testimonials.items.map((item, i) => (
                 <div
@@ -2633,9 +2940,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
       case 'videoTestimonials':
         return t.videoTestimonials.visible && t.videoTestimonials.items.length > 0 && (
-        <section className="py-16 lg:py-24 overflow-hidden" style={{ backgroundColor: sbg('videoTestimonials', hexToRgba(c.secondary, 0.05)) }}>
+        <section className="py-11 sm:py-14 lg:py-20 overflow-hidden" style={{ backgroundColor: sbg('videoTestimonials', hexToRgba(c.secondary, 0.05)) }}>
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <SectionHeading title={t.videoTestimonials.title} subtitle={t.videoTestimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-12" />
+            <SectionHeading title={t.videoTestimonials.title} subtitle={t.videoTestimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8" />
             <VideoTestimonialsSlider
               items={videoTestimonialItems}
               primaryColor={c.accent}
@@ -2646,9 +2953,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       
       case 'program':
         return t.program.visible && (
-      <section className="py-16 lg:py-24" style={{ backgroundColor: sbg('program', hexToRgba(c.primary, 0.05)) }}>
+      <section className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('program', hexToRgba(c.primary, 0.05)) }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <SectionHeading title={t.program.title} subtitle={t.program.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-12 lg:mb-16" />
+          <SectionHeading title={t.program.title} subtitle={t.program.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8 lg:mb-11" />
           <div className="grid gap-5 lg:gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {t.program.points.map((point, i) => (
               <div
@@ -2688,7 +2995,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             ))}
           </div>
           {hasContent(t.program.ctaButtonText) && (
-            <div className="lt-reveal text-center mt-14">
+            <div className="lt-reveal text-center mt-10">
               {t.program.ctaButtonAction === "url" ? (
                 <a href={resolveLink(t.program.ctaButtonLink)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
                   <span className="lt-cta-sheen" aria-hidden="true" />
@@ -2711,12 +3018,12 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       case 'bonus':
         return t.bonus.enabled && t.bonus.items.length > 0 && (
         <section
-          className="relative overflow-hidden py-16 lg:py-24"
+          className="relative overflow-hidden py-11 sm:py-14 lg:py-20"
           style={t.sectionBg?.['bonus'] ? { backgroundColor: t.sectionBg['bonus'] } : stage}
         >
           <span className="lt-grain-layer" aria-hidden="true" />
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading title={t.bonus.title} accent={c.accent} onDark className="mb-12 lg:mb-16" />
+            <SectionHeading title={t.bonus.title} accent={c.accent} onDark className="mb-8 lg:mb-11" />
             <div className={`grid gap-6 lg:gap-8 mx-auto ${t.bonus.items.length >= 3 ? "sm:grid-cols-2 lg:grid-cols-3 max-w-6xl" : "sm:grid-cols-2 max-w-4xl"}`}>
               {t.bonus.items.map((item, i) => (
                 <div
@@ -2766,7 +3073,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         const banner = t.appBanner;
         if (!banner || !banner.visible || !hasContent(banner.image)) return null;
         return (
-          <section id="appBanner" className="py-16 lg:py-20" style={{ backgroundColor: sbg('appBanner', c.bodyBg) }}>
+          <section id="appBanner" className="py-11 sm:py-14 lg:py-16" style={{ backgroundColor: sbg('appBanner', c.bodyBg) }}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <a
                 href={resolveLink(banner.link)}
@@ -2785,7 +3092,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
       case 'invitation':
         return t.invitation.enabled && (
-        <section className="py-16 lg:py-24" style={{ backgroundColor: sbg('invitation', hexToRgba(c.primary, 0.06)) }}>
+        <section className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('invitation', hexToRgba(c.primary, 0.06)) }}>
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
             <div className="lt-reveal relative overflow-hidden rounded-[32px] p-7 sm:p-10 lg:p-12" style={stage}>
               <span className="lt-grain-layer" aria-hidden="true" />
@@ -2935,7 +3242,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
               const bullets = block.content.split('\n').filter(line => line.trim());
               return (
                 <div>
-                  <div className="lt-reveal mb-5"><RitualRule color={c.accent} /></div>
+                  <div className="lt-reveal mb-5 flex justify-center"><RitualRule color={c.accent} /></div>
                   {block.heading && (
                     <h3
                       className="lt-reveal font-display text-[clamp(1.7rem,3.4vw,2.75rem)] font-bold leading-[1.1] tracking-[-0.02em]"
@@ -2967,7 +3274,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
               // plain text
               return (
                 <div>
-                  <div className="lt-reveal mb-5"><RitualRule color={c.accent} /></div>
+                  <div className="lt-reveal mb-5 flex justify-center"><RitualRule color={c.accent} /></div>
                   {block.heading && (
                     <h3
                       className="lt-reveal font-display text-[clamp(1.7rem,3.4vw,2.75rem)] font-bold leading-[1.1] tracking-[-0.02em]"
@@ -2990,7 +3297,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           return (
             <section
               key={`content-block-${blockIndex}`}
-              className="py-16 lg:py-24"
+              className="py-11 sm:py-14 lg:py-20"
               style={{ backgroundColor: sbg(`contentBlock-${blockIndex}`, c.bodyBg) }}
             >
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -3070,9 +3377,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
       case 'faq':
         return t.faq?.enabled && t.faq.items.length > 0 && (
-          <section className="py-16 lg:py-24" style={{ backgroundColor: sbg('faq', c.bodyBg) }}>
+          <section className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('faq', c.bodyBg) }}>
             <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={t.faq.title} subtitle={t.faq.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-12" />
+              <SectionHeading title={t.faq.title} subtitle={t.faq.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8" />
               <div className="space-y-3">
                 {t.faq.items.map((item, i) => (
                   <div key={i} className="lt-reveal" style={{ ["--lt-i" as string]: i }}>
@@ -3083,6 +3390,597 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             </div>
           </section>
         );
+
+      // ---------------------------------------------------------------------
+      // Conversion sections
+      // ---------------------------------------------------------------------
+      case 'announcementBar': {
+        const bar = t.announcementBar;
+        if (!bar?.visible) return null;
+        if (!hasContent(bar.text) && !hasContent(bar.countdownTo)) return null;
+        // Sticky is dropped inside the editor: the canvas is a CSS-zoomed,
+        // independently scrolled box, where a position:sticky bar detaches and
+        // floats over unrelated sections.
+        const sticky = (bar.sticky ?? true) && !isEditorMode;
+        return (
+          <div
+            id="announcementBar"
+            className={`${sticky ? "sticky top-0" : "relative"} z-40 w-full`}
+            style={t.sectionBg?.['announcementBar'] ? { backgroundColor: t.sectionBg['announcementBar'] } : { backgroundImage: `linear-gradient(90deg, ${c.accent} 0%, ${c.primary} 100%)` }}
+          >
+            <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-3 gap-y-1.5 px-3 py-2 text-center sm:px-6 sm:py-2.5">
+              {hasContent(bar.text) && (
+                <span className="font-body text-[11.5px] font-semibold leading-snug text-white sm:text-sm">
+                  {bar.text}
+                </span>
+              )}
+              {hasContent(bar.countdownTo) && (
+                <span className="text-white">
+                  <Countdown target={bar.countdownTo} label={bar.countdownLabel} variant="inline" accent={c.accent} />
+                </span>
+              )}
+              {hasContent(bar.ctaText) && (
+                bar.ctaAction === "url" ? (
+                  <a
+                    href={resolveLink(bar.ctaLink)}
+                    className="lt-focus inline-flex items-center rounded-full bg-white/95 px-3 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors hover:bg-white sm:text-xs"
+                    style={{ color: c.secondary }}
+                  >
+                    {bar.ctaText}
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setInvitationDialogOpen(true)}
+                    className="lt-focus inline-flex items-center rounded-full bg-white/95 px-3 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors hover:bg-white sm:text-xs"
+                    style={{ color: c.secondary }}
+                  >
+                    {bar.ctaText}
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      case 'eventDetails': {
+        const ev = t.eventDetails;
+        if (!ev?.visible) return null;
+        const seats = Math.max(0, Math.min(100, ev.seatsFilledPercent || 0));
+        return (
+          <section id="eventDetails" className="py-14 sm:py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('eventDetails', c.bodyBg) }}>
+            <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+              <SectionHeading title={ev.title} subtitle={ev.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-7 lg:mb-9" />
+              <div
+                className="lt-reveal overflow-hidden rounded-[26px] sm:rounded-[32px]"
+                style={{ backgroundColor: surface, border: `1px solid ${hairline}`, boxShadow: cardShadow }}
+              >
+                {(ev.pills || []).filter(hasContent).length > 0 && (
+                  <div className="flex flex-wrap gap-2 border-b px-5 py-4 sm:px-8 sm:py-5" style={{ borderColor: hairline }}>
+                    {(ev.pills || []).filter(hasContent).map((pill, i) => (
+                      <span
+                        key={i}
+                        className="font-body inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold sm:text-xs"
+                        style={{ backgroundColor: hexToRgba(c.accent, 0.1), color: onDarkBody ? "#fff" : c.secondary }}
+                      >
+                        {pill}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {(ev.items || []).length > 0 && (
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-6 px-5 py-6 sm:grid-cols-4 sm:px-8 sm:py-8">
+                    {(ev.items || []).map((item, i) => (
+                      <div key={i} className="flex flex-col items-start gap-2">
+                        <span
+                          className="flex h-9 w-9 items-center justify-center rounded-xl"
+                          style={{ backgroundColor: hexToRgba(c.accent, 0.12) }}
+                        >
+                          <ProgramIcon name={item.icon} className="h-4 w-4" style={{ color: c.accent } as React.CSSProperties} />
+                        </span>
+                        <span className="font-body text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: muted }}>
+                          {item.label}
+                        </span>
+                        <span className="font-body -mt-1 text-sm font-semibold leading-snug sm:text-[15px]" style={{ color: ink }}>
+                          {item.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {(hasContent(ev.price) || hasContent(ev.ctaButtonText) || hasContent(ev.seatsNote) || seats > 0) && (
+                  <div
+                    className="border-t px-5 py-6 sm:px-8 sm:py-7"
+                    style={{ borderColor: hairline, backgroundColor: hexToRgba(c.accent, 0.045) }}
+                  >
+                    <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                      {hasContent(ev.price) && (
+                        <div>
+                          {hasContent(ev.priceLabel) && (
+                            <span className="font-body block text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: muted }}>
+                              {ev.priceLabel}
+                            </span>
+                          )}
+                          <span className="mt-1 flex flex-wrap items-baseline gap-2">
+                            <span className="font-display text-3xl font-bold leading-none sm:text-4xl" style={{ color: ink }}>
+                              {ev.price}
+                            </span>
+                            {hasContent(ev.originalPrice) && (
+                              <span className="font-body text-base line-through sm:text-lg" style={{ color: muted }}>
+                                {ev.originalPrice}
+                              </span>
+                            )}
+                          </span>
+                          {hasContent(ev.savingsNote) && (
+                            <span
+                              className="font-body mt-2 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold"
+                              style={{ backgroundColor: hexToRgba(c.accent, 0.14), color: c.accent }}
+                            >
+                              {ev.savingsNote}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {hasContent(ev.ctaButtonText) && (
+                        ev.ctaButtonAction === "url" ? (
+                          <a href={resolveLink(ev.ctaButtonLink)} className={`${ctaClass("lg")} w-full sm:w-auto`} style={ctaStyle(c.primary, c.accent)}>
+                            <span className="lt-cta-sheen" aria-hidden="true" />
+                            {ev.ctaButtonText}
+                            <CtaArrow />
+                          </a>
+                        ) : (
+                          <button type="button" onClick={() => setInvitationDialogOpen(true)} className={`${ctaClass("lg")} w-full sm:w-auto`} style={ctaStyle(c.primary, c.accent)}>
+                            <span className="lt-cta-sheen" aria-hidden="true" />
+                            {ev.ctaButtonText}
+                            <CtaArrow />
+                          </button>
+                        )
+                      )}
+                    </div>
+
+                    {(seats > 0 || hasContent(ev.seatsNote)) && (
+                      // lt-reveal drives the fill: it sits at width 0 until the
+                      // row scrolls into view, then sweeps out to --lt-seat.
+                      // The inline width stays the source of truth so the bar is
+                      // still correct with JS off or inside the editor.
+                      <div className="lt-reveal mt-5" style={{ ["--lt-seat" as string]: `${seats}%` }}>
+                        {seats > 0 && (
+                          <div className="lt-seat-track relative h-2 w-full overflow-hidden rounded-full" style={{ backgroundColor: hexToRgba(c.secondary, 0.12) }}>
+                            <div
+                              className="lt-seat-fill relative h-full rounded-full"
+                              style={{ width: `${seats}%`, backgroundImage: `linear-gradient(90deg, ${c.primary}, ${c.accent})` }}
+                            >
+                              <span className="lt-seat-shimmer" aria-hidden="true" />
+                            </div>
+                          </div>
+                        )}
+                        {hasContent(ev.seatsNote) && (
+                          <p className="font-body mt-2 flex items-center gap-1.5 text-xs font-semibold" style={{ color: c.accent }}>
+                            <span className="lt-seat-dot relative flex h-2 w-2 flex-shrink-0" aria-hidden="true">
+                              <span className="lt-seat-ping absolute inline-flex h-full w-full rounded-full" style={{ backgroundColor: c.accent }} />
+                              <span className="relative inline-flex h-2 w-2 rounded-full" style={{ backgroundColor: c.accent }} />
+                            </span>
+                            {ev.seatsNote}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      case 'problems': {
+        const pr = t.problems;
+        if (!pr?.visible) return null;
+        const items = (pr.items || []).filter((p) => hasContent(p.title));
+        const impacts = (pr.impacts || []).filter(hasContent);
+        if (items.length === 0 && impacts.length === 0) return null;
+        return (
+          <section id="problems" className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('problems', c.bodyBg) }}>
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <SectionHeading title={pr.title} subtitle={pr.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8 lg:mb-10" />
+              {items.length > 0 && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+                  {items.map((item, i) => (
+                    <div
+                      key={i}
+                      className="lt-reveal lt-card flex gap-4 rounded-[22px] p-5 sm:p-6"
+                      style={{ ["--lt-i" as string]: i % 3, backgroundColor: surface, border: `1px solid ${hairline}`, boxShadow: cardShadow }}
+                    >
+                      <span
+                        className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl"
+                        style={{ backgroundColor: hexToRgba(c.accent, 0.12) }}
+                      >
+                        <ProgramIcon name={item.icon} className="h-5 w-5" style={{ color: c.accent } as React.CSSProperties} />
+                      </span>
+                      <div className="min-w-0">
+                        <h3 className="font-body text-[15px] font-semibold leading-snug sm:text-base" style={{ color: ink }}>{item.title}</h3>
+                        {hasContent(item.description) && (
+                          <p className="font-body mt-1.5 text-sm leading-relaxed" style={{ color: muted }}>{item.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {impacts.length > 0 && (
+                <div className="lt-reveal relative mt-9 overflow-hidden rounded-[26px] p-6 sm:mt-10 sm:rounded-[32px] sm:p-10" style={stage}>
+                  <span className="lt-grain-layer" aria-hidden="true" />
+                  <div className="relative">
+                    {hasContent(pr.impactTitle) && (
+                      <h3 className="font-display text-[clamp(1.4rem,3.2vw,2.1rem)] font-bold leading-tight tracking-[-0.02em] text-white">
+                        {pr.impactTitle}
+                      </h3>
+                    )}
+                    <ul className="mt-6 grid grid-cols-1 gap-x-8 gap-y-3.5 sm:grid-cols-2">
+                      {impacts.map((line, i) => (
+                        <li key={i} className="flex gap-3">
+                          <span
+                            className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full"
+                            style={{ backgroundColor: hexToRgba(c.accent, 0.28) }}
+                          >
+                            <X className="h-3 w-3 text-white" />
+                          </span>
+                          <span className="font-body text-sm leading-relaxed text-white/75">{line}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        );
+      }
+
+      case 'curriculum': {
+        const cur = t.curriculum;
+        if (!cur?.visible) return null;
+        const modules = (cur.modules || []).filter((m) => hasContent(m.title));
+        if (modules.length === 0) return null;
+        const asCards = cur.displayMode === "cards";
+        return (
+          <section id="curriculum" className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('curriculum', c.bodyBg) }}>
+            <div className={`mx-auto px-4 sm:px-6 lg:px-8 ${asCards ? "max-w-7xl" : "max-w-3xl"}`}>
+              <SectionHeading title={cur.title} subtitle={cur.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8" />
+              {asCards ? (
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+                  {modules.map((m, i) => (
+                    <div
+                      key={i}
+                      className="lt-reveal lt-card lt-zoom group overflow-hidden rounded-[24px]"
+                      style={{ ["--lt-i" as string]: i % 3, backgroundColor: surface, border: `1px solid ${hairline}`, boxShadow: cardShadow }}
+                    >
+                      {hasContent(m.image) && (
+                        <div className="aspect-[16/9] w-full overflow-hidden">
+                          {renderMedia(m.image, mediaKey("curriculum", "modules", i, "image"), {
+                            className: "h-full w-full object-cover",
+                            alt: m.title,
+                          })}
+                        </div>
+                      )}
+                      <div className="p-6">
+                        {hasContent(m.label) && (
+                          <span className="font-body text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: c.accent }}>
+                            {m.label}
+                          </span>
+                        )}
+                        <h3 className="font-display mt-2 text-lg font-bold leading-snug" style={{ color: ink }}>{m.title}</h3>
+                        {hasContent(m.description) && (
+                          <p className="font-body mt-2 text-sm leading-relaxed" style={{ color: muted }}>{m.description}</p>
+                        )}
+                        {(m.bullets || []).filter(hasContent).length > 0 && (
+                          <ul className="mt-4 space-y-2">
+                            {(m.bullets || []).filter(hasContent).map((b, j) => (
+                              <li key={j} className="flex gap-2.5">
+                                <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" style={{ color: c.accent }} />
+                                <span className="font-body text-sm leading-relaxed" style={{ color: muted }}>{b}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {modules.map((m, i) => (
+                    <div key={i} className="lt-reveal" style={{ ["--lt-i" as string]: i }}>
+                      <CurriculumRow
+                        module={m}
+                        index={i}
+                        defaultOpen={i === 0}
+                        accent={c.accent}
+                        ink={ink}
+                        muted={muted}
+                        surface={surface}
+                        hairline={hairline}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {hasContent(cur.ctaButtonText) && (
+                <div className="lt-reveal mt-9 text-center">
+                  {cur.ctaButtonAction === "url" ? (
+                    <a href={resolveLink(cur.ctaButtonLink)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                      <span className="lt-cta-sheen" aria-hidden="true" />
+                      {cur.ctaButtonText}
+                      <CtaArrow />
+                    </a>
+                  ) : (
+                    <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                      <span className="lt-cta-sheen" aria-hidden="true" />
+                      {cur.ctaButtonText}
+                      <CtaArrow />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+        );
+      }
+
+      case 'pricing': {
+        const pricing = t.pricing;
+        if (!pricing?.visible) return null;
+        const tiers = (pricing.tiers || []).filter((tier) => hasContent(tier.name) || hasContent(tier.price));
+        if (tiers.length === 0) return null;
+        return (
+          <section
+            id="pricing"
+            className="relative overflow-hidden py-11 sm:py-14 lg:py-20"
+            style={t.sectionBg?.['pricing'] ? { backgroundColor: t.sectionBg['pricing'] } : stage}
+          >
+            <span className="lt-grain-layer" aria-hidden="true" />
+            <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <SectionHeading title={pricing.title} subtitle={pricing.subtitle} accent={c.accent} onDark className="mb-8 lg:mb-11" />
+              <div
+                className={`grid grid-cols-1 gap-5 sm:gap-6 ${tiers.length >= 3 ? "lg:grid-cols-3" : tiers.length === 2 ? "sm:grid-cols-2 lg:max-w-4xl lg:mx-auto" : "max-w-md mx-auto"}`}
+              >
+                {tiers.map((tier, i) => {
+                  const hot = !!tier.highlighted;
+                  return (
+                    <div
+                      key={i}
+                      className={`lt-reveal lt-card relative flex flex-col rounded-[26px] p-6 sm:p-8 ${hot ? "lg:-mt-4 lg:mb-4" : ""}`}
+                      style={{
+                        ["--lt-i" as string]: i,
+                        backgroundColor: hot ? "#FFFFFF" : "rgba(255,255,255,0.06)",
+                        border: `1px solid ${hot ? hexToRgba(c.accent, 0.6) : "rgba(255,255,255,0.14)"}`,
+                        boxShadow: hot ? `0 30px 70px -30px ${hexToRgba(c.accent, 0.8)}` : "0 20px 50px -34px rgba(0,0,0,.85)",
+                        backdropFilter: hot ? undefined : "blur(6px)",
+                      }}
+                    >
+                      {hasContent(tier.badge) && (
+                        <span
+                          className="font-body absolute -top-3 left-6 inline-flex items-center rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white"
+                          style={{ backgroundImage: `linear-gradient(135deg, ${c.accent}, ${c.primary})` }}
+                        >
+                          {tier.badge}
+                        </span>
+                      )}
+                      <h3
+                        className="font-body text-[11px] font-semibold uppercase tracking-[0.2em]"
+                        style={{ color: hot ? c.accent : "rgba(255,255,255,0.7)" }}
+                      >
+                        {tier.name}
+                      </h3>
+                      <div className="mt-3 flex flex-wrap items-baseline gap-2">
+                        <span
+                          className="font-display text-4xl font-bold leading-none"
+                          style={{ color: hot ? "#111827" : "#FFFFFF" }}
+                        >
+                          {tier.price}
+                        </span>
+                        {hasContent(tier.originalPrice) && (
+                          <span className="font-body text-base line-through" style={{ color: hot ? "#9CA3AF" : "rgba(255,255,255,0.5)" }}>
+                            {tier.originalPrice}
+                          </span>
+                        )}
+                        {hasContent(tier.period) && (
+                          <span className="font-body text-sm" style={{ color: hot ? "#6B7280" : "rgba(255,255,255,0.6)" }}>
+                            {tier.period}
+                          </span>
+                        )}
+                      </div>
+                      {hasContent(tier.description) && (
+                        <p className="font-body mt-3 text-sm leading-relaxed" style={{ color: hot ? "#4B5563" : "rgba(255,255,255,0.66)" }}>
+                          {tier.description}
+                        </p>
+                      )}
+                      <div className="my-6 h-px w-full" style={{ backgroundColor: hot ? "rgba(17,24,39,0.08)" : "rgba(255,255,255,0.12)" }} />
+                      <ul className="flex-1 space-y-3">
+                        {(tier.features || []).filter(hasContent).map((f, j) => (
+                          <li key={j} className="flex gap-2.5">
+                            <span
+                              className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full"
+                              style={{ backgroundColor: hexToRgba(c.accent, hot ? 0.16 : 0.3) }}
+                            >
+                              <Check className="h-3 w-3" style={{ color: hot ? c.accent : "#FFFFFF" }} />
+                            </span>
+                            <span className="font-body text-sm leading-relaxed" style={{ color: hot ? "#374151" : "rgba(255,255,255,0.75)" }}>
+                              {f}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      {hasContent(tier.ctaText) && (
+                        <div className="mt-7">
+                          {tier.ctaAction === "url" ? (
+                            <a
+                              href={resolveLink(tier.ctaLink)}
+                              className={`${ctaClass("md")} w-full`}
+                              style={hot ? ctaStyle(c.primary, c.accent) : { backgroundColor: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.28)" }}
+                            >
+                              <span className="lt-cta-sheen" aria-hidden="true" />
+                              {tier.ctaText}
+                              <CtaArrow />
+                            </a>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setInvitationDialogOpen(true)}
+                              className={`${ctaClass("md")} w-full`}
+                              style={hot ? ctaStyle(c.primary, c.accent) : { backgroundColor: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.28)" }}
+                            >
+                              <span className="lt-cta-sheen" aria-hidden="true" />
+                              {tier.ctaText}
+                              <CtaArrow />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {hasContent(pricing.footnote) && (
+                <p className="lt-reveal mt-8 text-center font-body text-xs text-white/55">{pricing.footnote}</p>
+              )}
+            </div>
+          </section>
+        );
+      }
+
+      case 'comparison': {
+        const cmp = t.comparison;
+        if (!cmp?.visible) return null;
+        const columns = (cmp.columns || []).filter(hasContent);
+        const rows = (cmp.rows || []).filter((r) => hasContent(r.feature));
+        if (columns.length === 0 || rows.length === 0) return null;
+        const hi = cmp.highlightColumn ?? -1;
+        const renderCell = (value?: string) => {
+          const v = (value || "").trim().toLowerCase();
+          if (v === "yes" || v === "true") return <Check className="mx-auto h-5 w-5" style={{ color: c.accent }} />;
+          if (v === "no" || v === "false") return <X className="mx-auto h-5 w-5" style={{ color: onDarkBody ? "rgba(255,255,255,0.3)" : "#D1D5DB" }} />;
+          return <span className="font-body text-xs sm:text-sm" style={{ color: muted }}>{value}</span>;
+        };
+        return (
+          <section id="comparison" className="py-11 sm:py-14 lg:py-20" style={{ backgroundColor: sbg('comparison', c.bodyBg) }}>
+            <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+              <SectionHeading title={cmp.title} subtitle={cmp.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-8" />
+              {/* Wide table scrolls inside its own box so the page body never
+                  scrolls sideways on a phone. The hint below only shows at the
+                  widths where the table actually overflows. */}
+              <p className="lt-reveal mb-3 text-center font-body text-[11px] font-medium sm:hidden" style={{ color: muted }}>
+                Swipe the table sideways to compare →
+              </p>
+              <div
+                className="lt-reveal overflow-x-auto rounded-[22px]"
+                style={{ backgroundColor: surface, border: `1px solid ${hairline}`, boxShadow: cardShadow }}
+              >
+                <table className="w-full min-w-[520px] border-collapse">
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${hairline}` }}>
+                      <th className="px-4 py-4 text-left sm:px-6" />
+                      {columns.map((col, i) => (
+                        <th
+                          key={i}
+                          className="px-3 py-4 text-center sm:px-5"
+                          style={i === hi ? { backgroundColor: hexToRgba(c.accent, 0.07) } : undefined}
+                        >
+                          <span
+                            className="font-body text-[11px] font-bold uppercase tracking-[0.14em] sm:text-xs"
+                            style={{ color: i === hi ? c.accent : ink }}
+                          >
+                            {col}
+                          </span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row, i) => (
+                      <tr key={i} style={i < rows.length - 1 ? { borderBottom: `1px solid ${hairline}` } : undefined}>
+                        <td className="px-4 py-3.5 sm:px-6">
+                          <span className="font-body text-[13px] font-medium leading-snug sm:text-sm" style={{ color: ink }}>
+                            {row.feature}
+                          </span>
+                        </td>
+                        {columns.map((_, j) => (
+                          <td
+                            key={j}
+                            className="px-3 py-3.5 text-center sm:px-5"
+                            style={j === hi ? { backgroundColor: hexToRgba(c.accent, 0.07) } : undefined}
+                          >
+                            {renderCell(row.values?.[j])}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      case 'guarantee': {
+        const g = t.guarantee;
+        if (!g?.visible) return null;
+        const items = (g.items || []).filter((i) => hasContent(i.title));
+        if (items.length === 0) return null;
+        return (
+          <section
+            id="guarantee"
+            className="relative overflow-hidden py-11 sm:py-14 lg:py-20"
+            style={t.sectionBg?.['guarantee'] ? { backgroundColor: t.sectionBg['guarantee'] } : deepStage}
+          >
+            <span className="lt-grain-layer" aria-hidden="true" />
+            <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+              <SectionHeading title={g.title} subtitle={g.subtitle} accent={c.accent} onDark className="mb-8 lg:mb-10" />
+              <div className={`grid grid-cols-1 gap-5 sm:gap-6 ${items.length >= 3 ? "md:grid-cols-3" : "sm:grid-cols-2"}`}>
+                {items.map((item, i) => (
+                  <div
+                    key={i}
+                    className="lt-reveal lt-card rounded-[24px] p-6 text-center sm:p-8"
+                    style={{
+                      ["--lt-i" as string]: i,
+                      backgroundColor: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.14)",
+                      backdropFilter: "blur(6px)",
+                    }}
+                  >
+                    <span
+                      className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
+                      style={{ backgroundImage: `linear-gradient(135deg, ${c.accent}, ${c.primary})` }}
+                    >
+                      <ProgramIcon name={item.icon} className="h-6 w-6" style={{ color: "#fff" } as React.CSSProperties} />
+                    </span>
+                    <h3 className="font-display mt-5 text-lg font-bold leading-snug text-white">{item.title}</h3>
+                    <p className="font-body mt-2.5 text-sm leading-relaxed text-white/70">{item.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      case 'liveProof': {
+        const lp = t.liveProof;
+        if (!lp?.visible) return null;
+        const items = (lp.items || []).filter((i) => hasContent(i.text));
+        if (items.length === 0) return null;
+        // Fixed-position overlay, so its slot in sectionOrder has no visual
+        // effect — but it stays in the order so it's editable like any section.
+        // Suppressed in the editor, where a fixed toast would hover over the
+        // canvas chrome.
+        if (isEditorMode) return null;
+        return <LiveProofToast items={items} intervalMs={lp.intervalMs} accent={c.accent} />;
+      }
 
       case 'footer':
         return t.footer.enabled && (
@@ -3097,7 +3995,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           style={{ background: `radial-gradient(circle, ${hexToRgba(c.accent, 0.32)} 0%, transparent 70%)` }}
         />
         {/* Closing CTA */}
-        <div className="relative py-20 lg:py-28 text-center">
+        <div className="relative py-14 sm:py-16 lg:py-20 text-center">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="lt-reveal mb-6 flex justify-center"><RitualRule color={c.accent} /></div>
             <h2
@@ -3135,7 +4033,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         </div>
         {/* Logo / address / social + link columns */}
         {(hasContent(t.footer.logo) || hasContent(t.footer.address) || (t.footer.socialLinks || []).length > 0 || (t.footer.linkColumns || []).length > 0) && (
-          <div className="relative border-t border-white/10 py-14">
+          <div className="relative border-t border-white/10 py-9 sm:py-11">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-10 md:flex-row md:justify-between">
               {(hasContent(t.footer.logo) || hasContent(t.footer.address) || (t.footer.socialLinks || []).length > 0) && (
                 <div>
@@ -3174,7 +4072,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                     <div key={i} className="flex flex-col">
                       <p className="font-body mb-3 text-sm font-semibold text-white">{col.heading}</p>
                       {col.links.map((link, j) => (
-                        <a key={j} href={resolveLink(link.url)} className="lt-focus font-body mb-2 text-xs text-white/50 transition-colors hover:text-white">
+                        <a key={j} href={resolveLink(link.url)} className="lt-taplink lt-focus font-body text-xs text-white/50 transition-colors hover:text-white">
                           {link.label}
                         </a>
                       ))}
@@ -3188,7 +4086,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
         {/* Popular Links tag cloud */}
         {(t.footer.popularLinks || []).length > 0 && (
-          <div className="relative border-t border-white/10 py-10">
+          <div className="relative border-t border-white/10 py-7 sm:py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <p className="font-body mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Popular Links</p>
               <div className="flex flex-wrap gap-x-1 gap-y-2">
@@ -3205,17 +4103,17 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
         {/* App download */}
         {t.footer.appDownload && hasContent(t.footer.appDownload.text) && (hasContent(t.footer.appDownload.iosUrl) || hasContent(t.footer.appDownload.androidUrl)) && (
-          <div className="relative border-t border-white/10 py-10">
+          <div className="relative border-t border-white/10 py-7 sm:py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <p className="font-body mb-3 text-sm font-medium text-white/70">{t.footer.appDownload.text}</p>
               <div className="flex flex-wrap gap-3">
                 {hasContent(t.footer.appDownload.iosUrl) && (
-                  <a href={resolveLink(t.footer.appDownload.iosUrl)} target="_blank" rel="noopener noreferrer" className="lt-focus inline-flex items-center rounded-full px-4 py-2 text-xs font-semibold text-white transition-colors" style={{ backgroundColor: "rgba(255,255,255,0.08)" }}>
+                  <a href={resolveLink(t.footer.appDownload.iosUrl)} target="_blank" rel="noopener noreferrer" className="lt-focus inline-flex min-h-[40px] items-center rounded-full px-4 py-2 text-xs font-semibold text-white transition-colors" style={{ backgroundColor: "rgba(255,255,255,0.08)" }}>
                     App Store
                   </a>
                 )}
                 {hasContent(t.footer.appDownload.androidUrl) && (
-                  <a href={resolveLink(t.footer.appDownload.androidUrl)} target="_blank" rel="noopener noreferrer" className="lt-focus inline-flex items-center rounded-full px-4 py-2 text-xs font-semibold text-white transition-colors" style={{ backgroundColor: "rgba(255,255,255,0.08)" }}>
+                  <a href={resolveLink(t.footer.appDownload.androidUrl)} target="_blank" rel="noopener noreferrer" className="lt-focus inline-flex min-h-[40px] items-center rounded-full px-4 py-2 text-xs font-semibold text-white transition-colors" style={{ backgroundColor: "rgba(255,255,255,0.08)" }}>
                     Google Play
                   </a>
                 )}
@@ -3225,12 +4123,12 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         )}
 
         {/* Bottom Bar */}
-        <div className="relative border-t border-white/10 py-7">
+        <div className="relative border-t border-white/10 py-5 sm:py-6">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="font-body text-sm text-white/45">{t.footer.copyright}</p>
             <div className="flex flex-wrap justify-center gap-x-7 gap-y-2">
               {t.footer.links.map((link, i) => (
-                <a key={i} href={link.url} className="lt-focus font-body text-sm text-white/45 transition-colors hover:text-white">
+                <a key={i} href={link.url} className="lt-taplink lt-focus font-body text-sm text-white/45 transition-colors hover:text-white">
                   {link.label}
                 </a>
               ))}
@@ -3273,6 +4171,36 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         @keyframes lt-sheen { 0% { transform: translateX(-130%) skewX(-18deg); } 55%, 100% { transform: translateX(240%) skewX(-18deg); } }
         @keyframes lt-marquee-l { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         @keyframes lt-marquee-r { 0% { transform: translateX(-50%); } 100% { transform: translateX(0); } }
+        @keyframes lt-proof-pop { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
+        .lt-proof-pop { animation: lt-proof-pop .5s cubic-bezier(.16,1,.3,1) both; }
+
+        /* Seats-remaining bar. The fill only starts from zero once .lt-anim is
+           on the root and the row has been revealed — with JS off, the inline
+           width renders straight away and none of this applies. */
+        @keyframes lt-seat-shimmer { 0% { transform: translateX(-100%); } 60%, 100% { transform: translateX(320%); } }
+        @keyframes lt-seat-ping { 0% { transform: scale(1); opacity: .75; } 70% { transform: scale(2.4); opacity: 0; } 100% { transform: scale(2.4); opacity: 0; } }
+        .lt-seat-shimmer {
+          position: absolute; inset: 0 auto 0 0; width: 40%; pointer-events: none; border-radius: 9999px;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,.65), transparent);
+          animation: lt-seat-shimmer 2.6s ease-in-out 1.1s infinite;
+        }
+        .lt-seat-ping { animation: lt-seat-ping 1.9s cubic-bezier(0,0,.2,1) infinite; }
+        .lt-anim .lt-reveal .lt-seat-fill { width: 0 !important; }
+        .lt-anim .lt-reveal.is-in .lt-seat-fill {
+          width: var(--lt-seat, 0%) !important;
+          transition: width 1.5s cubic-bezier(.16,1,.3,1) .15s;
+        }
+
+        /* Tap targets. min-height does nothing to a non-replaced inline element,
+           so this only targets things that already establish a box — the CTAs,
+           icon buttons and carousel dots. Inline text links get their padding
+           from .lt-taplink instead. */
+        @media (hover: none) and (pointer: coarse) {
+          .lt-cta, button.lt-focus { min-height: 44px; }
+        }
+        /* Footer/nav text links: padded to a comfortable target without
+           changing the visual rhythm (negative margin absorbs the padding). */
+        .lt-taplink { display: inline-flex; align-items: center; min-height: 36px; }
         .animate-marquee { animation: marquee 20s linear infinite; }
         .lt-marquee-track { animation: lt-marquee-l 46s linear infinite; }
         .lt-marquee-track.lt-marquee-reverse { animation-name: lt-marquee-r; }
@@ -3318,6 +4246,10 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           .lt-anim .lt-reveal, .lt-anim .lt-reveal.is-in { opacity: 1 !important; transform: none !important; transition: none !important; }
           .lt-anim .lt-rise { animation: none !important; }
           .lt-aura, .animate-marquee, .lt-marquee-track, .animate-bounce { animation: none !important; }
+          .lt-proof-pop { animation: none !important; }
+          .lt-seat-shimmer, .lt-seat-ping { animation: none !important; }
+          .lt-anim .lt-reveal .lt-seat-fill,
+          .lt-anim .lt-reveal.is-in .lt-seat-fill { width: var(--lt-seat, 0%) !important; transition: none !important; }
           .lt-card:hover, .lt-cta:hover { transform: none !important; }
           .lt-zoom:hover img, .lt-zoom:hover video { transform: none !important; }
         }
@@ -3374,8 +4306,78 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         <SectionInsertPoint index={sectionOrder.length} bridge={editorBridge} />
       )}
 
+      {/* Reserves the strip the docked CTA occupies so it can never cover the
+          last rows of the footer on a phone. */}
       {floatingButtonProps && (
-        <div className="fixed inset-x-0 bottom-4 flex justify-center md:hidden z-40 px-4 pointer-events-none">
+        <div
+          aria-hidden="true"
+          className={`${isCheckoutBar ? "h-[68px]" : "h-[88px]"} ${floatingOnDesktop ? "" : "md:hidden"}`}
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        />
+      )}
+
+      {floatingButtonProps && (isCheckoutBar ? (
+        // Docked checkout bar: price + note on the left, button on the right —
+        // the pattern every reference landing page uses on mobile. Sits above
+        // the home-indicator via env(safe-area-inset-bottom).
+        <div
+          className={`fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur-md ${floatingOnDesktop ? "" : "md:hidden"}`}
+          style={{
+            backgroundColor: hexToRgba(c.darkBg, 0.92),
+            borderColor: "rgba(255,255,255,0.12)",
+            paddingBottom: "env(safe-area-inset-bottom)",
+            boxShadow: "0 -12px 34px -18px rgba(0,0,0,.8)",
+          }}
+        >
+          <div className="mx-auto flex max-w-3xl items-center gap-3 px-3 py-2.5 sm:gap-5 sm:px-6 sm:py-3">
+            {(hasContent(t.floatingButton.priceText) || hasContent(t.floatingButton.noteText)) && (
+              <div className="min-w-0 flex-1">
+                {hasContent(t.floatingButton.priceText) && (
+                  <span className="flex flex-wrap items-baseline gap-1.5">
+                    <span className="font-display text-lg font-bold leading-none text-white sm:text-xl">
+                      {t.floatingButton.priceText}
+                    </span>
+                    {hasContent(t.floatingButton.strikePriceText) && (
+                      <span className="font-body text-xs line-through text-white/45 sm:text-sm">
+                        {t.floatingButton.strikePriceText}
+                      </span>
+                    )}
+                  </span>
+                )}
+                {hasContent(t.floatingButton.noteText) && (
+                  <span className="font-body mt-0.5 block truncate text-[10.5px] font-medium text-white/60 sm:text-xs">
+                    {t.floatingButton.noteText}
+                  </span>
+                )}
+              </div>
+            )}
+            {"href" in floatingButtonProps ? (
+              <a
+                href={floatingButtonProps.href}
+                className="lt-cta lt-focus group/cta relative inline-flex h-12 flex-shrink-0 items-center justify-center rounded-full px-5 text-sm font-semibold text-white shadow-lg sm:px-8 sm:text-base"
+                style={ctaStyle(c.primary, c.accent)}
+              >
+                <span className="lt-cta-sheen" aria-hidden="true" />
+                {floatingButtonProps.label}
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={floatingButtonProps.action}
+                className="lt-cta lt-focus group/cta relative inline-flex h-12 flex-shrink-0 items-center justify-center rounded-full px-5 text-sm font-semibold text-white shadow-lg sm:px-8 sm:text-base"
+                style={ctaStyle(c.primary, c.accent)}
+              >
+                <span className="lt-cta-sheen" aria-hidden="true" />
+                {floatingButtonProps.label}
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div
+          className={`fixed inset-x-0 bottom-4 flex justify-center z-40 px-4 pointer-events-none ${floatingOnDesktop ? "" : "md:hidden"}`}
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
           <div className="relative w-full max-w-sm pointer-events-auto">
             <div className="absolute inset-0 rounded-full bg-gradient-to-r from-pink-400/60 via-purple-500/50 to-amber-400/60 blur-2xl opacity-80 animate-pulse" />
             <span className="floating-cta-ring absolute inset-0 rounded-full border border-white/70" style={{ animation: "floating-cta-ring 2.5s ease-out infinite" }} />
@@ -3400,7 +4402,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             )}
           </div>
         </div>
-      )}
+      ))}
     </div>
   );
 }

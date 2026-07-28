@@ -3051,7 +3051,11 @@ export function RichEditor({
         </div>
 
         {/* Panel Body - Scrollable */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin">
+        {/* min-w-0 lets this shrink to the 320px panel instead of being pushed
+            wider by a too-wide control, and overflow-x-hidden means any future
+            offender gets clipped rather than turning the whole panel into a
+            sideways scroller. */}
+        <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden scrollbar-thin">
           {activeTab === "template" && templateData ? (
             <div className="p-3">
               <TemplateEditor

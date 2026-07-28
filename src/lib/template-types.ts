@@ -140,6 +140,130 @@ export interface AppBannerSection {
   visible: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Conversion sections
+// Distilled from the common structure of high-performing webinar/course
+// landing pages. All are additive and default to visible:false, so existing
+// pages never gain an empty placeholder section.
+// ---------------------------------------------------------------------------
+
+// Thin urgency strip pinned above the hero ("Only 7 slots left", price-rising
+// warnings). Optionally counts down to a fixed instant.
+export interface AnnouncementBarSection {
+  text: string;
+  ctaText?: string;
+  ctaLink?: string;
+  ctaAction?: "invitation" | "url";
+  countdownTo?: string;    // ISO datetime — when set, a live countdown renders
+  countdownLabel?: string;
+  sticky?: boolean;        // stick to viewport top while scrolling
+  visible: boolean;
+}
+
+export interface EventDetailItem {
+  icon?: string;
+  label: string;
+  value: string;
+}
+
+// The "what/when/where/how much" card every webinar page leads with: format
+// pills, a meta grid, price with a struck-through anchor, and a seats-left bar.
+export interface EventDetailsSection {
+  title: string;
+  subtitle: string;
+  pills: string[];                  // e.g. "Beginner Friendly", "Recording Available"
+  items: EventDetailItem[];         // Date / Time / Duration / Language / Venue
+  priceLabel?: string;
+  price?: string;
+  originalPrice?: string;           // struck through next to `price`
+  savingsNote?: string;
+  seatsNote?: string;               // e.g. "Only 23 of 100 seats left"
+  seatsFilledPercent?: number;      // 0–100; renders a fill bar when > 0
+  ctaButtonText: string;
+  ctaButtonLink: string;
+  ctaButtonAction: "invitation" | "url";
+  visible: boolean;
+}
+
+// Pain-point taxonomy: an icon grid of problems the reader recognises, plus an
+// optional consequence list ("a bad relationship can…").
+export interface ProblemsSection {
+  title: string;
+  subtitle: string;
+  items: { icon?: string; title: string; description?: string }[];
+  impactTitle?: string;
+  impacts?: string[];
+  visible: boolean;
+}
+
+export interface CurriculumModule {
+  label: string;                    // "Day 1" / "Module 01"
+  title: string;
+  description?: string;
+  bullets: string[];
+  image?: string;                   // only used by the "cards" display mode
+}
+
+// Day-wise or module-wise breakdown of what gets taught.
+export interface CurriculumSection {
+  title: string;
+  subtitle: string;
+  modules: CurriculumModule[];
+  displayMode?: "accordion" | "cards";  // default "accordion"
+  ctaButtonText?: string;
+  ctaButtonLink?: string;
+  ctaButtonAction?: "invitation" | "url";
+  visible: boolean;
+}
+
+export interface PricingTier {
+  name: string;
+  price: string;
+  originalPrice?: string;
+  period?: string;                  // e.g. "/year", "one-time"
+  badge?: string;                   // e.g. "Most Popular"
+  description?: string;
+  features: string[];
+  ctaText: string;
+  ctaLink: string;
+  ctaAction: "invitation" | "url";
+  highlighted?: boolean;
+}
+
+export interface PricingSection {
+  title: string;
+  subtitle: string;
+  tiers: PricingTier[];
+  footnote?: string;
+  visible: boolean;
+}
+
+// Feature matrix. `values[i]` aligns with `columns[i]`; the strings "yes"/"no"
+// render as a tick/cross, anything else renders as literal text.
+export interface ComparisonSection {
+  title: string;
+  subtitle: string;
+  columns: string[];
+  rows: { feature: string; values: string[] }[];
+  highlightColumn?: number;         // 0-based index of the column to emphasise
+  visible: boolean;
+}
+
+// Risk-reversal triad ("Pay once", "No upsells", "Full refund").
+export interface GuaranteeSection {
+  title: string;
+  subtitle: string;
+  items: { icon?: string; title: string; description: string }[];
+  visible: boolean;
+}
+
+// Rotating corner toast of recent-signup notifications.
+export interface LiveProofSection {
+  items: { text: string; meta?: string; image?: string }[];
+  intervalMs?: number;              // default 5000
+  visible: boolean;
+}
+
 export interface VideoTestimonialItem {
   url: string;       // uploaded video URL or YouTube link
   name: string;
@@ -288,6 +412,14 @@ export type FloatingButtonSource = "hero" | "program" | "invitation" | "footer";
 export interface FloatingButtonSettings {
   enabled: boolean;
   section: FloatingButtonSource;
+  // "pill" (default) = the original centered pill. "bar" = full-width docked
+  // checkout bar with price + note beside the button, which is what every
+  // reference page uses on mobile.
+  variant?: "pill" | "bar";
+  priceText?: string;
+  strikePriceText?: string;
+  noteText?: string;
+  showOnDesktop?: boolean;   // default false — mobile-only, as before
 }
 
 // ---------------------------------------------------------------------------
@@ -309,46 +441,62 @@ export interface SectionStyleOptions {
 // editor, the canvas overlay, and the storefront renderer so they can never
 // drift apart.
 export const CANONICAL_SECTIONS = [
+  "announcementBar",
   "hero",
   "marquee",
+  "eventDetails",
+  "problems",
   "why",
   "about",
   "guidesRail",
   "logos",
   "gallery",
   "stats",
+  "curriculum",
   "formats",
   "testimonials",
   "videoTestimonials",
   "program",
+  "pricing",
+  "comparison",
+  "guarantee",
   "contentBlocks",
   "richContent",
   "appBanner",
   "invitation",
   "bonus",
   "faq",
+  "liveProof",
   "footer",
 ] as const;
 
 export const SECTION_LABELS: Record<string, string> = {
+  announcementBar: "Announcement Bar",
   hero: "Hero",
   marquee: "Marquee / Ticker",
+  eventDetails: "Event Details",
+  problems: "Problems / Pain Points",
   why: "Why Section",
   about: "About",
   guidesRail: "People Rail",
   logos: "Logo Bar",
   gallery: "Gallery",
   stats: "Stats / CTA",
+  curriculum: "Curriculum",
   formats: "Format Carousel",
   testimonials: "Testimonials",
   videoTestimonials: "Video Testimonials",
   program: "Program",
+  pricing: "Pricing Tiers",
+  comparison: "Comparison Table",
+  guarantee: "Guarantee",
   contentBlocks: "Content Blocks",
   richContent: "Rich Content",
   appBanner: "App Banner",
   invitation: "Request Invitation",
   bonus: "Bonus",
   faq: "FAQ",
+  liveProof: "Live Social Proof",
   footer: "Footer",
 };
 
@@ -384,24 +532,32 @@ export function getSectionVisibility(t: LandingTemplateData, key: string): boole
     return block ? !block.hidden : true;
   }
   switch (key) {
+    case "announcementBar": return t.announcementBar?.visible ?? false;
     case "hero": return t.hero.visible;
     case "marquee": return t.marquee.enabled;
+    case "eventDetails": return t.eventDetails?.visible ?? false;
+    case "problems": return t.problems?.visible ?? false;
     case "why": return t.why.visible;
     case "about": return t.about.visible;
     case "guidesRail": return t.guidesRail?.visible ?? true;
     case "logos": return t.logos.enabled;
     case "gallery": return t.gallery.visible;
     case "stats": return t.stats.visible;
+    case "curriculum": return t.curriculum?.visible ?? false;
     case "formats": return t.formats?.visible ?? true;
     case "testimonials": return t.testimonials.visible;
     case "videoTestimonials": return t.videoTestimonials.visible;
     case "program": return t.program.visible;
+    case "pricing": return t.pricing?.visible ?? false;
+    case "comparison": return t.comparison?.visible ?? false;
+    case "guarantee": return t.guarantee?.visible ?? false;
     case "contentBlocks": return (t.contentBlocks || []).some((b) => b.enabled);
     case "richContent": return true;
     case "appBanner": return t.appBanner?.visible ?? true;
     case "invitation": return t.invitation.enabled;
     case "bonus": return t.bonus.enabled;
     case "faq": return t.faq?.enabled ?? true;
+    case "liveProof": return t.liveProof?.visible ?? false;
     case "footer": return t.footer.enabled;
     default: return true;
   }
@@ -416,24 +572,32 @@ export function applySectionVisibility(t: LandingTemplateData, key: string, visi
     };
   }
   switch (key) {
+    case "announcementBar": return { ...t, announcementBar: { ...(t.announcementBar || DEFAULT_TEMPLATE_DATA.announcementBar!), visible } };
     case "hero": return { ...t, hero: { ...t.hero, visible } };
     case "marquee": return { ...t, marquee: { ...t.marquee, enabled: visible } };
+    case "eventDetails": return { ...t, eventDetails: { ...(t.eventDetails || DEFAULT_TEMPLATE_DATA.eventDetails!), visible } };
+    case "problems": return { ...t, problems: { ...(t.problems || DEFAULT_TEMPLATE_DATA.problems!), visible } };
     case "why": return { ...t, why: { ...t.why, visible } };
     case "about": return { ...t, about: { ...t.about, visible } };
     case "guidesRail": return { ...t, guidesRail: { ...(t.guidesRail || DEFAULT_TEMPLATE_DATA.guidesRail!), visible } };
     case "logos": return { ...t, logos: { ...t.logos, enabled: visible } };
     case "gallery": return { ...t, gallery: { ...t.gallery, visible } };
     case "stats": return { ...t, stats: { ...t.stats, visible } };
+    case "curriculum": return { ...t, curriculum: { ...(t.curriculum || DEFAULT_TEMPLATE_DATA.curriculum!), visible } };
     case "formats": return { ...t, formats: { ...(t.formats || DEFAULT_TEMPLATE_DATA.formats!), visible } };
     case "testimonials": return { ...t, testimonials: { ...t.testimonials, visible } };
     case "videoTestimonials": return { ...t, videoTestimonials: { ...t.videoTestimonials, visible } };
     case "program": return { ...t, program: { ...t.program, visible } };
+    case "pricing": return { ...t, pricing: { ...(t.pricing || DEFAULT_TEMPLATE_DATA.pricing!), visible } };
+    case "comparison": return { ...t, comparison: { ...(t.comparison || DEFAULT_TEMPLATE_DATA.comparison!), visible } };
+    case "guarantee": return { ...t, guarantee: { ...(t.guarantee || DEFAULT_TEMPLATE_DATA.guarantee!), visible } };
     case "contentBlocks": return { ...t, contentBlocks: (t.contentBlocks || []).map((b) => ({ ...b, enabled: visible })) };
     case "richContent": return t;
     case "appBanner": return { ...t, appBanner: { ...(t.appBanner || DEFAULT_TEMPLATE_DATA.appBanner!), visible } };
     case "invitation": return { ...t, invitation: { ...t.invitation, enabled: visible } };
     case "bonus": return { ...t, bonus: { ...t.bonus, enabled: visible } };
     case "faq": return { ...t, faq: { ...(t.faq || DEFAULT_TEMPLATE_DATA.faq!), enabled: visible } };
+    case "liveProof": return { ...t, liveProof: { ...(t.liveProof || DEFAULT_TEMPLATE_DATA.liveProof!), visible } };
     case "footer": return { ...t, footer: { ...t.footer, enabled: visible } };
     default: return t;
   }
@@ -464,21 +628,29 @@ export const DEFAULT_MEDIA_SETTINGS: MediaFieldOptions = {
 
 export interface LandingTemplateData {
   colors: TemplateColors;
+  announcementBar?: AnnouncementBarSection;
   hero: HeroSection;
   marquee: MarqueeSection;
+  eventDetails?: EventDetailsSection;
+  problems?: ProblemsSection;
   why: WhySection;
   about: AboutSection;
   guidesRail?: GuidesRailSection;
   logos: LogoSection;
   gallery: GallerySection;
   stats: StatsSection;
+  curriculum?: CurriculumSection;
   formats?: FormatsSection;
   testimonials: TestimonialsSection;
   videoTestimonials: VideoTestimonialsSection;
   program: ProgramSection;
+  pricing?: PricingSection;
+  comparison?: ComparisonSection;
+  guarantee?: GuaranteeSection;
   bonus: BonusSection;
   contentBlocks?: ContentBlockSection[];
   faq?: FaqSection;
+  liveProof?: LiveProofSection;
   appBanner?: AppBannerSection;
   invitation: InvitationSection;
   footer: FooterSection;
@@ -498,7 +670,7 @@ export interface LandingTemplateData {
 // Default template data (placeholder content)
 // ---------------------------------------------------------------------------
 export const DEFAULT_TEMPLATE_DATA: LandingTemplateData = {
-  sectionOrder: ['hero', 'marquee', 'why', 'about', 'guidesRail', 'logos', 'gallery', 'stats', 'formats', 'testimonials', 'videoTestimonials', 'program', 'contentBlocks', 'appBanner', 'invitation', 'bonus', 'faq', 'footer'],
+  sectionOrder: ['announcementBar', 'hero', 'marquee', 'eventDetails', 'problems', 'why', 'about', 'guidesRail', 'logos', 'gallery', 'stats', 'curriculum', 'formats', 'testimonials', 'videoTestimonials', 'program', 'pricing', 'comparison', 'guarantee', 'contentBlocks', 'appBanner', 'invitation', 'bonus', 'faq', 'liveProof', 'footer'],
   mediaSettings: {},
   colors: {
     primary: "#F5A623",
@@ -591,6 +763,81 @@ export const DEFAULT_TEMPLATE_DATA: LandingTemplateData = {
     image: "",
     link: "#",
     alt: "",
+    visible: false,
+  },
+  announcementBar: {
+    text: "Only a few seats left at this price",
+    ctaText: "Reserve now",
+    ctaLink: "#register",
+    ctaAction: "invitation",
+    countdownTo: "",
+    countdownLabel: "Offer ends in",
+    sticky: true,
+    visible: false,
+  },
+  eventDetails: {
+    title: "Everything You Need to Know",
+    subtitle: "One live session. Nothing else to buy.",
+    pills: ["Beginner Friendly", "Live on Zoom", "Recording Available"],
+    items: [
+      { icon: "CalendarDays", label: "Date", value: "Sunday, 15 Feb" },
+      { icon: "Clock3", label: "Time", value: "11:30 AM IST" },
+      { icon: "Hourglass", label: "Duration", value: "90 minutes" },
+      { icon: "Languages", label: "Language", value: "Hindi + English" },
+    ],
+    priceLabel: "Your seat today",
+    price: "",
+    originalPrice: "",
+    savingsNote: "",
+    seatsNote: "",
+    seatsFilledPercent: 0,
+    ctaButtonText: "Reserve My Seat",
+    ctaButtonLink: "#register",
+    ctaButtonAction: "invitation",
+    visible: false,
+  },
+  problems: {
+    title: "Does This Sound Familiar?",
+    subtitle: "If you nodded at even two of these, this session was built for you.",
+    items: [],
+    impactTitle: "",
+    impacts: [],
+    visible: false,
+  },
+  curriculum: {
+    title: "What We'll Cover",
+    subtitle: "A clear path, broken into steps you can actually follow.",
+    modules: [],
+    displayMode: "accordion",
+    ctaButtonText: "",
+    ctaButtonLink: "#register",
+    ctaButtonAction: "invitation",
+    visible: false,
+  },
+  pricing: {
+    title: "Choose Your Path",
+    subtitle: "Pick the level of support that fits where you are right now.",
+    tiers: [],
+    footnote: "",
+    visible: false,
+  },
+  comparison: {
+    title: "Compare Your Options",
+    subtitle: "",
+    columns: [],
+    rows: [],
+    highlightColumn: 0,
+    visible: false,
+  },
+  guarantee: {
+    title: "Our Promise to You",
+    subtitle: "",
+    items: [],
+    visible: false,
+  },
+  liveProof: {
+    items: [],
+    intervalMs: 5000,
     visible: false,
   },
   logos: {
@@ -748,21 +995,29 @@ export function normalizeTemplateData(data?: Partial<LandingTemplateData>): Land
   if (!data) return DEFAULT_TEMPLATE_DATA;
   return {
     colors: { ...DEFAULT_TEMPLATE_DATA.colors, ...data.colors },
+    announcementBar: { ...DEFAULT_TEMPLATE_DATA.announcementBar!, ...data.announcementBar },
     hero: { ...DEFAULT_TEMPLATE_DATA.hero, ...data.hero },
     marquee: { ...DEFAULT_TEMPLATE_DATA.marquee, ...data.marquee },
+    eventDetails: { ...DEFAULT_TEMPLATE_DATA.eventDetails!, ...data.eventDetails },
+    problems: { ...DEFAULT_TEMPLATE_DATA.problems!, ...data.problems },
     why: { ...DEFAULT_TEMPLATE_DATA.why, ...data.why },
     about: { ...DEFAULT_TEMPLATE_DATA.about, ...data.about },
     guidesRail: { ...DEFAULT_TEMPLATE_DATA.guidesRail!, ...data.guidesRail },
     logos: { ...DEFAULT_TEMPLATE_DATA.logos, ...data.logos },
     gallery: { ...DEFAULT_TEMPLATE_DATA.gallery, ...data.gallery },
     stats: { ...DEFAULT_TEMPLATE_DATA.stats, ...data.stats },
+    curriculum: { ...DEFAULT_TEMPLATE_DATA.curriculum!, ...data.curriculum },
     formats: { ...DEFAULT_TEMPLATE_DATA.formats!, ...data.formats },
     testimonials: { ...DEFAULT_TEMPLATE_DATA.testimonials, ...data.testimonials },
     videoTestimonials: { ...DEFAULT_TEMPLATE_DATA.videoTestimonials, ...data.videoTestimonials },
     program: { ...DEFAULT_TEMPLATE_DATA.program, ...data.program },
+    pricing: { ...DEFAULT_TEMPLATE_DATA.pricing!, ...data.pricing },
+    comparison: { ...DEFAULT_TEMPLATE_DATA.comparison!, ...data.comparison },
+    guarantee: { ...DEFAULT_TEMPLATE_DATA.guarantee!, ...data.guarantee },
     bonus: { ...DEFAULT_TEMPLATE_DATA.bonus, ...data.bonus },
     contentBlocks: data.contentBlocks || [],
     faq: { ...DEFAULT_TEMPLATE_DATA.faq!, ...data.faq },
+    liveProof: { ...DEFAULT_TEMPLATE_DATA.liveProof!, ...data.liveProof },
     appBanner: { ...DEFAULT_TEMPLATE_DATA.appBanner!, ...data.appBanner },
     invitation: { ...DEFAULT_TEMPLATE_DATA.invitation, ...data.invitation },
     footer: { ...DEFAULT_TEMPLATE_DATA.footer, ...data.footer },

@@ -1,5 +1,7 @@
 import type { Config } from "tailwindcss";
-import { siteConfig } from "./brand-config/site.config";
+// Palette only, from a plain .mjs module — see brand-colors.mjs for why this
+// cannot be the .ts site config.
+import { activeBrandColors } from "./brand-config/brand-colors.mjs";
 
 const config = {
   darkMode: ["class"],
@@ -58,7 +60,7 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        brand: siteConfig.colors as unknown as Record<string, string>,
+        brand: activeBrandColors as unknown as Record<string, string>,
         // Adhyatmik Sutraa re-skin: the storefront/admin markup uses the stock
         // teal/emerald/cyan utility classes from the original theme, so those
         // three scales are remapped onto the live site's purple / pink /

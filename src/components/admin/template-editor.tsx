@@ -65,6 +65,24 @@ import {
   Anchor,
   Activity,
   HelpCircle,
+  CalendarDays,
+  Hourglass,
+  Languages,
+  ShieldCheck,
+  RefreshCcw,
+  BadgeCheck,
+  Wallet,
+  AlertTriangle,
+  PlayCircle,
+  CircleDollarSign,
+  Frown,
+  CloudRain,
+  Ban,
+  Ticket,
+  Table2,
+  ListChecks,
+  Megaphone,
+  Tag,
   type LucideIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -100,6 +118,23 @@ const mediaKey = (...parts: (string | number)[]) => parts.join(".");
 // ---------------------------------------------------------------------------
 // Icon Picker
 // ---------------------------------------------------------------------------
+// <input type="datetime-local"> speaks local wall-clock time with no zone,
+// while the stored countdown target is a full ISO instant. These convert
+// between the two without shifting the moment.
+function toDatetimeLocal(iso?: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fromDatetimeLocal(value: string): string {
+  if (!value) return "";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+}
+
 const ICON_OPTIONS: { name: string; icon: LucideIcon }[] = [
   { name: "Sparkles", icon: Sparkles },
   { name: "Zap", icon: Zap },
@@ -141,6 +176,24 @@ const ICON_OPTIONS: { name: string; icon: LucideIcon }[] = [
   { name: "FlaskConical", icon: FlaskConical },
   { name: "Gift", icon: Gift },
   { name: "MessageSquare", icon: MessageSquare },
+  // Conversion sections (event details, problems, guarantee)
+  { name: "CalendarDays", icon: CalendarDays },
+  { name: "Clock3", icon: Clock3 },
+  { name: "Hourglass", icon: Hourglass },
+  { name: "Languages", icon: Languages },
+  { name: "MapPin", icon: MapPin },
+  { name: "Video", icon: Video },
+  { name: "PlayCircle", icon: PlayCircle },
+  { name: "Ticket", icon: Ticket },
+  { name: "ShieldCheck", icon: ShieldCheck },
+  { name: "RefreshCcw", icon: RefreshCcw },
+  { name: "BadgeCheck", icon: BadgeCheck },
+  { name: "Wallet", icon: Wallet },
+  { name: "CircleDollarSign", icon: CircleDollarSign },
+  { name: "AlertTriangle", icon: AlertTriangle },
+  { name: "Frown", icon: Frown },
+  { name: "CloudRain", icon: CloudRain },
+  { name: "Ban", icon: Ban },
 ];
 
 // Per-section style panel: background color plus Elementor-style outer
@@ -592,42 +645,47 @@ function MediaField({
     <div>
       <Label className="text-xs text-gray-500">{label}</Label>
       
-      <div className="flex gap-1 mt-1 mb-2">
-        <Button 
+      {/* 2x2 grid, not a 4-across flex row: Button is whitespace-nowrap with
+          horizontal padding, and a flex item won't shrink below its min-content
+          width — so "YouTube"/"Instagram" pushed this row past the 320px panel
+          and made the sidebar scroll sideways. min-w-0 + truncate keeps each
+          cell honest even if a label grows. */}
+      <div className="grid grid-cols-2 gap-1 mt-1 mb-2">
+        <Button
           type="button"
-          variant={mediaType === 'link' ? 'default' : 'outline'} 
-          size="sm" 
-          className="h-7 text-[10px] flex-1"
+          variant={mediaType === 'link' ? 'default' : 'outline'}
+          size="sm"
+          className="h-7 min-w-0 px-2 text-[10px]"
           onClick={() => setMediaType('link')}
         >
-          <LinkIcon className="h-3 w-3 mr-1" /> Link
+          <LinkIcon className="h-3 w-3 mr-1 flex-shrink-0" /> <span className="truncate">Link</span>
         </Button>
-        <Button 
+        <Button
           type="button"
-          variant={mediaType === 'upload' ? 'default' : 'outline'} 
-          size="sm" 
-          className="h-7 text-[10px] flex-1"
+          variant={mediaType === 'upload' ? 'default' : 'outline'}
+          size="sm"
+          className="h-7 min-w-0 px-2 text-[10px]"
           onClick={() => setMediaType('upload')}
         >
-          <Upload className="h-3 w-3 mr-1" /> Upload
+          <Upload className="h-3 w-3 mr-1 flex-shrink-0" /> <span className="truncate">Upload</span>
         </Button>
-        <Button 
+        <Button
           type="button"
-          variant={mediaType === 'youtube' ? 'default' : 'outline'} 
-          size="sm" 
-          className="h-7 text-[10px] flex-1"
+          variant={mediaType === 'youtube' ? 'default' : 'outline'}
+          size="sm"
+          className="h-7 min-w-0 px-2 text-[10px]"
           onClick={() => setMediaType('youtube')}
         >
-          <Youtube className="h-3 w-3 mr-1" /> YouTube
+          <Youtube className="h-3 w-3 mr-1 flex-shrink-0" /> <span className="truncate">YouTube</span>
         </Button>
         <Button
           type="button"
           variant={mediaType === 'instagram' ? 'default' : 'outline'}
           size="sm"
-          className="h-7 text-[10px] flex-1"
+          className="h-7 min-w-0 px-2 text-[10px]"
           onClick={() => setMediaType('instagram')}
         >
-          <Video className="h-3 w-3 mr-1" /> Instagram
+          <Video className="h-3 w-3 mr-1 flex-shrink-0" /> <span className="truncate">Instagram</span>
         </Button>
       </div>
 
@@ -1102,6 +1160,49 @@ export function TemplateEditor({
             <p className="text-[10px] text-gray-400">
               Only one floating button can be active at a time. Update the source button text inside its section.
             </p>
+
+            <Label className="text-xs text-gray-500 pt-1 block">Style</Label>
+            <select
+              value={data.floatingButton.variant ?? "pill"}
+              onChange={(e) => update("floatingButton", { variant: e.target.value as "pill" | "bar" })}
+              className="w-full h-9 rounded-md border border-gray-200 bg-white px-3 text-sm"
+            >
+              <option value="pill">Floating Pill (glowing)</option>
+              <option value="bar">Docked Checkout Bar (price + button)</option>
+            </select>
+
+            <div className="flex items-center justify-between pt-1">
+              <Label className="text-xs text-gray-600">Also show on desktop</Label>
+              <Switch
+                checked={data.floatingButton.showOnDesktop ?? false}
+                onCheckedChange={(v) => update("floatingButton", { showOnDesktop: v })}
+              />
+            </div>
+
+            {data.floatingButton.variant === "bar" && (
+              <div className="space-y-2 pt-1">
+                <div className="flex gap-1">
+                  <Input
+                    value={data.floatingButton.priceText ?? ''}
+                    onChange={(e) => update("floatingButton", { priceText: e.target.value })}
+                    className="h-8 text-xs bg-gray-50 border-gray-200 flex-1"
+                    placeholder="₹99"
+                  />
+                  <Input
+                    value={data.floatingButton.strikePriceText ?? ''}
+                    onChange={(e) => update("floatingButton", { strikePriceText: e.target.value })}
+                    className="h-8 text-xs bg-gray-50 border-gray-200 flex-1"
+                    placeholder="₹2,999"
+                  />
+                </div>
+                <Input
+                  value={data.floatingButton.noteText ?? ''}
+                  onChange={(e) => update("floatingButton", { noteText: e.target.value })}
+                  className="h-8 text-xs bg-gray-50 border-gray-200"
+                  placeholder="Only 23 seats left · closes Sunday"
+                />
+              </div>
+            )}
           </div>
         )}
       </Section>
@@ -1502,6 +1603,602 @@ export function TemplateEditor({
             <Plus className="h-3 w-3 mr-1" /> Add
           </Button>
         </div>
+      </Section>
+    ),
+    announcementBar: (
+      <Section
+        key="announcementBar"
+        title="Announcement Bar"
+        icon={<Megaphone className="h-4 w-4" />}
+        {...sectionProps('announcementBar')}
+      >
+        <SectionBgField sectionKey="announcementBar" value={data.sectionBg?.['announcementBar'] || ''} onChange={updateSectionBg} />
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-gray-600">Show bar</Label>
+          <Switch checked={data.announcementBar?.visible ?? false} onCheckedChange={(v) => update("announcementBar", { visible: v })} />
+        </div>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-gray-600">Stick to top on scroll</Label>
+          <Switch checked={data.announcementBar?.sticky ?? true} onCheckedChange={(v) => update("announcementBar", { sticky: v })} />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Message</Label>
+          <Input value={data.announcementBar?.text ?? ''} onChange={(e) => update("announcementBar", { text: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" placeholder="Only 7 seats left at this price" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Countdown ends at</Label>
+          <Input
+            type="datetime-local"
+            value={toDatetimeLocal(data.announcementBar?.countdownTo)}
+            onChange={(e) => update("announcementBar", { countdownTo: fromDatetimeLocal(e.target.value) })}
+            className="h-8 text-xs mt-1 bg-gray-50 border-gray-200"
+          />
+          <p className="text-[10px] text-gray-400 mt-1">Leave empty to hide the timer.</p>
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Countdown label</Label>
+          <Input value={data.announcementBar?.countdownLabel ?? ''} onChange={(e) => update("announcementBar", { countdownLabel: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" placeholder="Offer ends in" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Button text</Label>
+          <Input value={data.announcementBar?.ctaText ?? ''} onChange={(e) => update("announcementBar", { ctaText: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Button action</Label>
+          <select
+            value={data.announcementBar?.ctaAction ?? "invitation"}
+            onChange={(e) => update("announcementBar", { ctaAction: e.target.value as "invitation" | "url" })}
+            className="w-full h-8 rounded-md border border-gray-200 bg-white px-2 text-xs mt-1"
+          >
+            <option value="invitation">Open invitation form</option>
+            <option value="url">Go to URL</option>
+          </select>
+        </div>
+        {data.announcementBar?.ctaAction === "url" && (
+          <div>
+            <Label className="text-xs text-gray-500">Button link</Label>
+            <Input value={data.announcementBar?.ctaLink ?? ''} onChange={(e) => update("announcementBar", { ctaLink: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+          </div>
+        )}
+      </Section>
+    ),
+    eventDetails: (
+      <Section
+        key="eventDetails"
+        title="Event Details"
+        icon={<CalendarDays className="h-4 w-4" />}
+        {...sectionProps('eventDetails')}
+      >
+        <SectionBgField sectionKey="eventDetails" value={data.sectionBg?.['eventDetails'] || ''} onChange={updateSectionBg} />
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-gray-600">Show section</Label>
+          <Switch checked={data.eventDetails?.visible ?? false} onCheckedChange={(v) => update("eventDetails", { visible: v })} />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Title</Label>
+          <Input value={data.eventDetails?.title ?? ''} onChange={(e) => update("eventDetails", { title: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Subtitle</Label>
+          <Input value={data.eventDetails?.subtitle ?? ''} onChange={(e) => update("eventDetails", { subtitle: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+
+        <Label className="text-xs font-semibold text-gray-600 pt-1 block">Pills</Label>
+        {(data.eventDetails?.pills ?? []).map((pill, i) => (
+          <div key={i} className="flex gap-1">
+            <Input value={pill} onChange={(e) => {
+              const arr = [...(data.eventDetails?.pills ?? [])]; arr[i] = e.target.value; update("eventDetails", { pills: arr });
+            }} className="h-8 text-xs bg-white border-gray-200 flex-1" placeholder="Recording Available" />
+            <Button variant="ghost" size="sm" className="h-8 px-2 text-red-500" onClick={() => update("eventDetails", { pills: (data.eventDetails?.pills ?? []).filter((_, j) => j !== i) })}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => update("eventDetails", { pills: [...(data.eventDetails?.pills ?? []), ""] })}>
+          <Plus className="h-3 w-3 mr-1" /> Add Pill
+        </Button>
+
+        <Label className="text-xs font-semibold text-gray-600 pt-2 block">Detail rows</Label>
+        {(data.eventDetails?.items ?? []).map((item, i) => {
+          const items = data.eventDetails?.items ?? [];
+          return (
+            <div key={i} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-gray-400 uppercase">Detail {i + 1}</span>
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-red-500" onClick={() => update("eventDetails", { items: items.filter((_, j) => j !== i) })}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+              <IconPicker value={item.icon ?? ''} onChange={(name) => {
+                const arr = [...items]; arr[i] = { ...arr[i], icon: name }; update("eventDetails", { items: arr });
+              }} />
+              <Input value={item.label} onChange={(e) => {
+                const arr = [...items]; arr[i] = { ...arr[i], label: e.target.value }; update("eventDetails", { items: arr });
+              }} className="h-8 text-xs bg-white border-gray-200" placeholder="Label (Date)" />
+              <Input value={item.value} onChange={(e) => {
+                const arr = [...items]; arr[i] = { ...arr[i], value: e.target.value }; update("eventDetails", { items: arr });
+              }} className="h-8 text-xs bg-white border-gray-200" placeholder="Value (Sunday, 15 Feb)" />
+            </div>
+          );
+        })}
+        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => update("eventDetails", { items: [...(data.eventDetails?.items ?? []), { icon: "CalendarDays", label: "", value: "" }] })}>
+          <Plus className="h-3 w-3 mr-1" /> Add Detail
+        </Button>
+
+        <Label className="text-xs font-semibold text-gray-600 pt-2 block">Price &amp; seats</Label>
+        <div>
+          <Label className="text-xs text-gray-500">Price label</Label>
+          <Input value={data.eventDetails?.priceLabel ?? ''} onChange={(e) => update("eventDetails", { priceLabel: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div className="flex gap-1">
+          <Input value={data.eventDetails?.price ?? ''} onChange={(e) => update("eventDetails", { price: e.target.value })} className="h-8 text-xs bg-gray-50 border-gray-200 flex-1" placeholder="₹99" />
+          <Input value={data.eventDetails?.originalPrice ?? ''} onChange={(e) => update("eventDetails", { originalPrice: e.target.value })} className="h-8 text-xs bg-gray-50 border-gray-200 flex-1" placeholder="₹2,999" />
+        </div>
+        <Input value={data.eventDetails?.savingsNote ?? ''} onChange={(e) => update("eventDetails", { savingsNote: e.target.value })} className="h-8 text-xs bg-gray-50 border-gray-200" placeholder="Save 96% today" />
+        <Input value={data.eventDetails?.seatsNote ?? ''} onChange={(e) => update("eventDetails", { seatsNote: e.target.value })} className="h-8 text-xs bg-gray-50 border-gray-200" placeholder="Only 23 of 100 seats left" />
+        <div>
+          <Label className="text-xs text-gray-500">Seats filled ({data.eventDetails?.seatsFilledPercent ?? 0}%)</Label>
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            value={data.eventDetails?.seatsFilledPercent ?? 0}
+            onChange={(e) => update("eventDetails", { seatsFilledPercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })}
+            className="h-8 text-xs mt-1 bg-gray-50 border-gray-200"
+          />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Button text</Label>
+          <Input value={data.eventDetails?.ctaButtonText ?? ''} onChange={(e) => update("eventDetails", { ctaButtonText: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Button action</Label>
+          <select
+            value={data.eventDetails?.ctaButtonAction ?? "invitation"}
+            onChange={(e) => update("eventDetails", { ctaButtonAction: e.target.value as "invitation" | "url" })}
+            className="w-full h-8 rounded-md border border-gray-200 bg-white px-2 text-xs mt-1"
+          >
+            <option value="invitation">Open invitation form</option>
+            <option value="url">Go to URL</option>
+          </select>
+        </div>
+        {data.eventDetails?.ctaButtonAction === "url" && (
+          <Input value={data.eventDetails?.ctaButtonLink ?? ''} onChange={(e) => update("eventDetails", { ctaButtonLink: e.target.value })} className="h-8 text-xs bg-gray-50 border-gray-200" placeholder="https://..." />
+        )}
+      </Section>
+    ),
+    problems: (
+      <Section
+        key="problems"
+        title="Problems / Pain Points"
+        icon={<AlertTriangle className="h-4 w-4" />}
+        {...sectionProps('problems')}
+      >
+        <SectionBgField sectionKey="problems" value={data.sectionBg?.['problems'] || ''} onChange={updateSectionBg} />
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-gray-600">Show section</Label>
+          <Switch checked={data.problems?.visible ?? false} onCheckedChange={(v) => update("problems", { visible: v })} />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Title</Label>
+          <Input value={data.problems?.title ?? ''} onChange={(e) => update("problems", { title: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Subtitle</Label>
+          <Input value={data.problems?.subtitle ?? ''} onChange={(e) => update("problems", { subtitle: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        {(data.problems?.items ?? []).map((item, i) => {
+          const items = data.problems?.items ?? [];
+          return (
+            <div key={i} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-gray-400 uppercase">Problem {i + 1}</span>
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-red-500" onClick={() => update("problems", { items: items.filter((_, j) => j !== i) })}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+              <IconPicker value={item.icon ?? ''} onChange={(name) => {
+                const arr = [...items]; arr[i] = { ...arr[i], icon: name }; update("problems", { items: arr });
+              }} />
+              <Input value={item.title} onChange={(e) => {
+                const arr = [...items]; arr[i] = { ...arr[i], title: e.target.value }; update("problems", { items: arr });
+              }} className="h-8 text-xs bg-white border-gray-200" placeholder="Title" />
+              <Textarea value={item.description ?? ''} onChange={(e) => {
+                const arr = [...items]; arr[i] = { ...arr[i], description: e.target.value }; update("problems", { items: arr });
+              }} rows={2} className="text-xs bg-white border-gray-200" placeholder="Description" />
+            </div>
+          );
+        })}
+        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => update("problems", { items: [...(data.problems?.items ?? []), { icon: "AlertTriangle", title: "", description: "" }] })}>
+          <Plus className="h-3 w-3 mr-1" /> Add Problem
+        </Button>
+
+        <Label className="text-xs font-semibold text-gray-600 pt-2 block">Consequence panel</Label>
+        <Input value={data.problems?.impactTitle ?? ''} onChange={(e) => update("problems", { impactTitle: e.target.value })} className="h-8 text-xs bg-gray-50 border-gray-200" placeholder="Left unaddressed, this costs you…" />
+        {(data.problems?.impacts ?? []).map((line, i) => (
+          <div key={i} className="flex gap-1">
+            <Input value={line} onChange={(e) => {
+              const arr = [...(data.problems?.impacts ?? [])]; arr[i] = e.target.value; update("problems", { impacts: arr });
+            }} className="h-8 text-xs bg-white border-gray-200 flex-1" />
+            <Button variant="ghost" size="sm" className="h-8 px-2 text-red-500" onClick={() => update("problems", { impacts: (data.problems?.impacts ?? []).filter((_, j) => j !== i) })}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => update("problems", { impacts: [...(data.problems?.impacts ?? []), ""] })}>
+          <Plus className="h-3 w-3 mr-1" /> Add Consequence
+        </Button>
+      </Section>
+    ),
+    curriculum: (
+      <Section
+        key="curriculum"
+        title="Curriculum"
+        icon={<ListChecks className="h-4 w-4" />}
+        {...sectionProps('curriculum')}
+      >
+        <SectionBgField sectionKey="curriculum" value={data.sectionBg?.['curriculum'] || ''} onChange={updateSectionBg} />
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-gray-600">Show section</Label>
+          <Switch checked={data.curriculum?.visible ?? false} onCheckedChange={(v) => update("curriculum", { visible: v })} />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Title</Label>
+          <Input value={data.curriculum?.title ?? ''} onChange={(e) => update("curriculum", { title: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Subtitle</Label>
+          <Input value={data.curriculum?.subtitle ?? ''} onChange={(e) => update("curriculum", { subtitle: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Display</Label>
+          <select
+            value={data.curriculum?.displayMode ?? "accordion"}
+            onChange={(e) => update("curriculum", { displayMode: e.target.value as "accordion" | "cards" })}
+            className="w-full h-8 rounded-md border border-gray-200 bg-white px-2 text-xs mt-1"
+          >
+            <option value="accordion">Accordion (numbered rows)</option>
+            <option value="cards">Cards with images</option>
+          </select>
+        </div>
+        {(data.curriculum?.modules ?? []).map((m, i) => {
+          const modules = data.curriculum?.modules ?? [];
+          const moduleKey = mediaKey("curriculum", "modules", i, "image");
+          return (
+            <div key={i} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-gray-400 uppercase">Module {i + 1}</span>
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-red-500" onClick={() => {
+                  clearMediaSettings(moduleKey);
+                  update("curriculum", { modules: modules.filter((_, j) => j !== i) });
+                }}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+              <Input value={m.label} onChange={(e) => {
+                const arr = [...modules]; arr[i] = { ...arr[i], label: e.target.value }; update("curriculum", { modules: arr });
+              }} className="h-8 text-xs bg-white border-gray-200" placeholder="Day 1 / Module 01" />
+              <Input value={m.title} onChange={(e) => {
+                const arr = [...modules]; arr[i] = { ...arr[i], title: e.target.value }; update("curriculum", { modules: arr });
+              }} className="h-8 text-xs bg-white border-gray-200" placeholder="Title" />
+              <Textarea value={m.description ?? ''} onChange={(e) => {
+                const arr = [...modules]; arr[i] = { ...arr[i], description: e.target.value }; update("curriculum", { modules: arr });
+              }} rows={2} className="text-xs bg-white border-gray-200" placeholder="Short description (optional)" />
+              <Textarea
+                value={(m.bullets ?? []).join("\n")}
+                onChange={(e) => {
+                  const arr = [...modules]; arr[i] = { ...arr[i], bullets: e.target.value.split("\n") }; update("curriculum", { modules: arr });
+                }}
+                rows={4}
+                className="text-xs bg-white border-gray-200"
+                placeholder="One bullet per line"
+              />
+              {data.curriculum?.displayMode === "cards" && (
+                <ImageField
+                  label="Image"
+                  value={m.image ?? ''}
+                  onChange={(v) => {
+                    const arr = [...modules]; arr[i] = { ...arr[i], image: v }; update("curriculum", { modules: arr });
+                  }}
+                  settings={mediaSettings[moduleKey]}
+                  onSettingsChange={(value) => handleMediaSettingsChange(moduleKey, value)}
+                  onClearSettings={() => clearMediaSettings(moduleKey)}
+                />
+              )}
+            </div>
+          );
+        })}
+        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => update("curriculum", { modules: [...(data.curriculum?.modules ?? []), { label: `Module ${(data.curriculum?.modules ?? []).length + 1}`, title: "", description: "", bullets: [""], image: "" }] })}>
+          <Plus className="h-3 w-3 mr-1" /> Add Module
+        </Button>
+        <div>
+          <Label className="text-xs text-gray-500">Button text (optional)</Label>
+          <Input value={data.curriculum?.ctaButtonText ?? ''} onChange={(e) => update("curriculum", { ctaButtonText: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Button action</Label>
+          <select
+            value={data.curriculum?.ctaButtonAction ?? "invitation"}
+            onChange={(e) => update("curriculum", { ctaButtonAction: e.target.value as "invitation" | "url" })}
+            className="w-full h-8 rounded-md border border-gray-200 bg-white px-2 text-xs mt-1"
+          >
+            <option value="invitation">Open invitation form</option>
+            <option value="url">Go to URL</option>
+          </select>
+        </div>
+        {data.curriculum?.ctaButtonAction === "url" && (
+          <Input value={data.curriculum?.ctaButtonLink ?? ''} onChange={(e) => update("curriculum", { ctaButtonLink: e.target.value })} className="h-8 text-xs bg-gray-50 border-gray-200" placeholder="https://..." />
+        )}
+      </Section>
+    ),
+    pricing: (
+      <Section
+        key="pricing"
+        title="Pricing Tiers"
+        icon={<Tag className="h-4 w-4" />}
+        {...sectionProps('pricing')}
+      >
+        <SectionBgField sectionKey="pricing" value={data.sectionBg?.['pricing'] || ''} onChange={updateSectionBg} />
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-gray-600">Show section</Label>
+          <Switch checked={data.pricing?.visible ?? false} onCheckedChange={(v) => update("pricing", { visible: v })} />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Title</Label>
+          <Input value={data.pricing?.title ?? ''} onChange={(e) => update("pricing", { title: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Subtitle</Label>
+          <Input value={data.pricing?.subtitle ?? ''} onChange={(e) => update("pricing", { subtitle: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        {(data.pricing?.tiers ?? []).map((tier, i) => {
+          const tiers = data.pricing?.tiers ?? [];
+          const patch = (p: Partial<typeof tier>) => {
+            const arr = [...tiers]; arr[i] = { ...arr[i], ...p }; update("pricing", { tiers: arr });
+          };
+          return (
+            <div key={i} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-gray-400 uppercase">Tier {i + 1}</span>
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-red-500" onClick={() => update("pricing", { tiers: tiers.filter((_, j) => j !== i) })}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+              <Input value={tier.name} onChange={(e) => patch({ name: e.target.value })} className="h-8 text-xs bg-white border-gray-200" placeholder="Tier name" />
+              <div className="flex gap-1">
+                <Input value={tier.price} onChange={(e) => patch({ price: e.target.value })} className="h-8 text-xs bg-white border-gray-200 flex-1" placeholder="₹599" />
+                <Input value={tier.originalPrice ?? ''} onChange={(e) => patch({ originalPrice: e.target.value })} className="h-8 text-xs bg-white border-gray-200 flex-1" placeholder="₹1,999" />
+              </div>
+              <div className="flex gap-1">
+                <Input value={tier.period ?? ''} onChange={(e) => patch({ period: e.target.value })} className="h-8 text-xs bg-white border-gray-200 flex-1" placeholder="one-time" />
+                <Input value={tier.badge ?? ''} onChange={(e) => patch({ badge: e.target.value })} className="h-8 text-xs bg-white border-gray-200 flex-1" placeholder="Most Popular" />
+              </div>
+              <Textarea value={tier.description ?? ''} onChange={(e) => patch({ description: e.target.value })} rows={2} className="text-xs bg-white border-gray-200" placeholder="Short description" />
+              <Textarea
+                value={(tier.features ?? []).join("\n")}
+                onChange={(e) => patch({ features: e.target.value.split("\n") })}
+                rows={4}
+                className="text-xs bg-white border-gray-200"
+                placeholder="One feature per line"
+              />
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-gray-600">Highlight this tier</Label>
+                <Switch checked={tier.highlighted ?? false} onCheckedChange={(v) => patch({ highlighted: v })} />
+              </div>
+              <Input value={tier.ctaText} onChange={(e) => patch({ ctaText: e.target.value })} className="h-8 text-xs bg-white border-gray-200" placeholder="Button text" />
+              <select
+                value={tier.ctaAction ?? "invitation"}
+                onChange={(e) => patch({ ctaAction: e.target.value as "invitation" | "url" })}
+                className="w-full h-8 rounded-md border border-gray-200 bg-white px-2 text-xs"
+              >
+                <option value="invitation">Open invitation form</option>
+                <option value="url">Go to URL</option>
+              </select>
+              {tier.ctaAction === "url" && (
+                <Input value={tier.ctaLink} onChange={(e) => patch({ ctaLink: e.target.value })} className="h-8 text-xs bg-white border-gray-200" placeholder="https://..." />
+              )}
+            </div>
+          );
+        })}
+        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => update("pricing", { tiers: [...(data.pricing?.tiers ?? []), { name: "", price: "", originalPrice: "", period: "", badge: "", description: "", features: [""], ctaText: "Get Started", ctaLink: "#register", ctaAction: "invitation" as const, highlighted: false }] })}>
+          <Plus className="h-3 w-3 mr-1" /> Add Tier
+        </Button>
+        <div>
+          <Label className="text-xs text-gray-500">Footnote</Label>
+          <Input value={data.pricing?.footnote ?? ''} onChange={(e) => update("pricing", { footnote: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" placeholder="7-day refund, no questions asked." />
+        </div>
+      </Section>
+    ),
+    comparison: (
+      <Section
+        key="comparison"
+        title="Comparison Table"
+        icon={<Table2 className="h-4 w-4" />}
+        {...sectionProps('comparison')}
+      >
+        <SectionBgField sectionKey="comparison" value={data.sectionBg?.['comparison'] || ''} onChange={updateSectionBg} />
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-gray-600">Show section</Label>
+          <Switch checked={data.comparison?.visible ?? false} onCheckedChange={(v) => update("comparison", { visible: v })} />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Title</Label>
+          <Input value={data.comparison?.title ?? ''} onChange={(e) => update("comparison", { title: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Subtitle</Label>
+          <Input value={data.comparison?.subtitle ?? ''} onChange={(e) => update("comparison", { subtitle: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Columns (one per line)</Label>
+          <Textarea
+            value={(data.comparison?.columns ?? []).join("\n")}
+            onChange={(e) => update("comparison", { columns: e.target.value.split("\n") })}
+            rows={3}
+            className="text-xs mt-1 bg-gray-50 border-gray-200"
+            placeholder={"This Workshop\nOther Courses"}
+          />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Highlight column</Label>
+          <select
+            value={String(data.comparison?.highlightColumn ?? 0)}
+            onChange={(e) => update("comparison", { highlightColumn: Number(e.target.value) })}
+            className="w-full h-8 rounded-md border border-gray-200 bg-white px-2 text-xs mt-1"
+          >
+            <option value="-1">None</option>
+            {(data.comparison?.columns ?? []).map((col, i) => (
+              <option key={i} value={String(i)}>{col || `Column ${i + 1}`}</option>
+            ))}
+          </select>
+        </div>
+        <p className="text-[10px] text-gray-400 leading-relaxed">
+          In each row, type <code className="font-mono">yes</code> or <code className="font-mono">no</code> for a tick/cross — anything else shows as text.
+        </p>
+        {(data.comparison?.rows ?? []).map((row, i) => {
+          const rows = data.comparison?.rows ?? [];
+          const cols = data.comparison?.columns ?? [];
+          return (
+            <div key={i} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-gray-400 uppercase">Row {i + 1}</span>
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-red-500" onClick={() => update("comparison", { rows: rows.filter((_, j) => j !== i) })}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+              <Input value={row.feature} onChange={(e) => {
+                const arr = [...rows]; arr[i] = { ...arr[i], feature: e.target.value }; update("comparison", { rows: arr });
+              }} className="h-8 text-xs bg-white border-gray-200" placeholder="Feature" />
+              {cols.map((col, j) => (
+                <Input
+                  key={j}
+                  value={row.values?.[j] ?? ''}
+                  onChange={(e) => {
+                    const arr = [...rows];
+                    const values = [...(arr[i].values ?? [])];
+                    values[j] = e.target.value;
+                    arr[i] = { ...arr[i], values };
+                    update("comparison", { rows: arr });
+                  }}
+                  className="h-8 text-xs bg-white border-gray-200"
+                  placeholder={col || `Column ${j + 1}`}
+                />
+              ))}
+            </div>
+          );
+        })}
+        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => update("comparison", { rows: [...(data.comparison?.rows ?? []), { feature: "", values: (data.comparison?.columns ?? []).map(() => "") }] })}>
+          <Plus className="h-3 w-3 mr-1" /> Add Row
+        </Button>
+      </Section>
+    ),
+    guarantee: (
+      <Section
+        key="guarantee"
+        title="Guarantee"
+        icon={<ShieldCheck className="h-4 w-4" />}
+        {...sectionProps('guarantee')}
+      >
+        <SectionBgField sectionKey="guarantee" value={data.sectionBg?.['guarantee'] || ''} onChange={updateSectionBg} />
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-gray-600">Show section</Label>
+          <Switch checked={data.guarantee?.visible ?? false} onCheckedChange={(v) => update("guarantee", { visible: v })} />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Title</Label>
+          <Input value={data.guarantee?.title ?? ''} onChange={(e) => update("guarantee", { title: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Subtitle</Label>
+          <Input value={data.guarantee?.subtitle ?? ''} onChange={(e) => update("guarantee", { subtitle: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        {(data.guarantee?.items ?? []).map((item, i) => {
+          const items = data.guarantee?.items ?? [];
+          return (
+            <div key={i} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-gray-400 uppercase">Promise {i + 1}</span>
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-red-500" onClick={() => update("guarantee", { items: items.filter((_, j) => j !== i) })}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+              <IconPicker value={item.icon ?? ''} onChange={(name) => {
+                const arr = [...items]; arr[i] = { ...arr[i], icon: name }; update("guarantee", { items: arr });
+              }} />
+              <Input value={item.title} onChange={(e) => {
+                const arr = [...items]; arr[i] = { ...arr[i], title: e.target.value }; update("guarantee", { items: arr });
+              }} className="h-8 text-xs bg-white border-gray-200" placeholder="Title" />
+              <Textarea value={item.description} onChange={(e) => {
+                const arr = [...items]; arr[i] = { ...arr[i], description: e.target.value }; update("guarantee", { items: arr });
+              }} rows={2} className="text-xs bg-white border-gray-200" placeholder="Description" />
+            </div>
+          );
+        })}
+        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => update("guarantee", { items: [...(data.guarantee?.items ?? []), { icon: "ShieldCheck", title: "", description: "" }] })}>
+          <Plus className="h-3 w-3 mr-1" /> Add Promise
+        </Button>
+      </Section>
+    ),
+    liveProof: (
+      <Section
+        key="liveProof"
+        title="Live Social Proof"
+        icon={<BadgeCheck className="h-4 w-4" />}
+        {...sectionProps('liveProof')}
+      >
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-gray-600">Show notifications</Label>
+          <Switch checked={data.liveProof?.visible ?? false} onCheckedChange={(v) => update("liveProof", { visible: v })} />
+        </div>
+        <p className="text-[10px] text-gray-400 leading-relaxed">
+          A rotating toast pinned to the bottom-left of the live page. It is hidden here in the editor, so preview it on the published page.
+        </p>
+        <div>
+          <Label className="text-xs text-gray-500">Rotate every (ms)</Label>
+          <Input
+            type="number"
+            min={2500}
+            value={data.liveProof?.intervalMs ?? 5000}
+            onChange={(e) => update("liveProof", { intervalMs: Math.max(2500, Number(e.target.value) || 5000) })}
+            className="h-8 text-xs mt-1 bg-gray-50 border-gray-200"
+          />
+        </div>
+        {(data.liveProof?.items ?? []).map((item, i) => {
+          const items = data.liveProof?.items ?? [];
+          const itemKey = mediaKey("liveProof", "items", i, "image");
+          return (
+            <div key={i} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-gray-400 uppercase">Notice {i + 1}</span>
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-red-500" onClick={() => {
+                  clearMediaSettings(itemKey);
+                  update("liveProof", { items: items.filter((_, j) => j !== i) });
+                }}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+              <Input value={item.text} onChange={(e) => {
+                const arr = [...items]; arr[i] = { ...arr[i], text: e.target.value }; update("liveProof", { items: arr });
+              }} className="h-8 text-xs bg-white border-gray-200" placeholder="Priya from Mumbai just reserved a seat" />
+              <Input value={item.meta ?? ''} onChange={(e) => {
+                const arr = [...items]; arr[i] = { ...arr[i], meta: e.target.value }; update("liveProof", { items: arr });
+              }} className="h-8 text-xs bg-white border-gray-200" placeholder="2 minutes ago" />
+              <ImageField
+                label="Avatar (optional)"
+                value={item.image ?? ''}
+                onChange={(v) => {
+                  const arr = [...items]; arr[i] = { ...arr[i], image: v }; update("liveProof", { items: arr });
+                }}
+                settings={mediaSettings[itemKey]}
+                onSettingsChange={(value) => handleMediaSettingsChange(itemKey, value)}
+                onClearSettings={() => clearMediaSettings(itemKey)}
+              />
+            </div>
+          );
+        })}
+        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => update("liveProof", { items: [...(data.liveProof?.items ?? []), { text: "", meta: "", image: "" }] })}>
+          <Plus className="h-3 w-3 mr-1" /> Add Notice
+        </Button>
       </Section>
     ),
     guidesRail: (
