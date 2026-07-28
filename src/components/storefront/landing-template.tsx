@@ -3156,7 +3156,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         return t.invitation.enabled && (
         <section className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('invitation', hexToRgba(c.primary, 0.06)) }}>
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
-            <div className="lt-reveal relative overflow-hidden rounded-[32px] p-7 sm:p-10 lg:p-12" style={stage}>
+            <div className="lt-reveal relative overflow-hidden rounded-[24px] p-5 sm:rounded-[32px] sm:p-8 lg:p-12" style={stage}>
               <span className="lt-grain-layer" aria-hidden="true" />
               <span
                 aria-hidden="true"
@@ -3167,24 +3167,27 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 <div className="text-center">
                   {(hasContent(t.invitation.badgeText) || hasContent(t.invitation.badgeEmoji)) && (
                     <div
-                      className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-sm"
+                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm sm:gap-2 sm:px-4 sm:py-1.5 sm:text-[11px] sm:tracking-[0.2em]"
                       style={{ backgroundColor: "rgba(255,255,255,0.10)", border: `1px solid ${hexToRgba(c.accent, 0.45)}` }}
                     >
                       <span>{t.invitation.badgeEmoji}</span>
                       {t.invitation.badgeText}
                     </div>
                   )}
-                  <h2 className="font-display mt-6 text-[clamp(1.8rem,3.6vw,2.9rem)] font-bold leading-[1.1] tracking-[-0.02em] text-white">
+                  <h2 className="font-display mt-4 text-[clamp(1.55rem,3.6vw,2.9rem)] font-bold leading-[1.12] tracking-[-0.02em] text-white sm:mt-6">
                     {t.invitation.title}
                   </h2>
                   {hasContent(t.invitation.subtitle) && (
-                    <p className="font-body mx-auto mt-4 max-w-2xl text-sm sm:text-base leading-relaxed text-white/75">
+                    <p className="font-body mx-auto mt-3 max-w-2xl text-[13.5px] leading-relaxed text-white/75 sm:mt-4 sm:text-base">
                       {t.invitation.subtitle}
                     </p>
                   )}
                 </div>
 
-                <div className="mt-10 grid gap-4 sm:grid-cols-3">
+                {/* Compact icon-left rows on phones (a stack of three tall
+                    centred cards wasted most of the width); reverts to the
+                    3-up centred grid from sm. */}
+                <div className="mt-6 grid gap-2.5 sm:mt-10 sm:grid-cols-3 sm:gap-4">
                   {[
                     { Icon: CalendarDays, label: t.invitation.dateLabel, value: t.invitation.dateValue },
                     { Icon: Clock3, label: t.invitation.timeLabel, value: t.invitation.timeValue },
@@ -3192,24 +3195,31 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                   ].map(({ Icon, label, value }, i) => (
                     <div
                       key={i}
-                      className="rounded-2xl p-5 text-center backdrop-blur-sm"
+                      className="flex items-center gap-3.5 rounded-2xl p-3.5 text-left backdrop-blur-sm sm:flex-col sm:gap-0 sm:p-5 sm:text-center"
                       style={{ backgroundColor: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.13)" }}
                     >
-                      <Icon className="mx-auto h-5 w-5" style={{ color: c.accent }} />
-                      <p className="font-body mt-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">{label}</p>
-                      <p className="font-display mt-1.5 text-lg font-bold leading-snug text-white">{value}</p>
+                      <span
+                        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl sm:mb-3"
+                        style={{ backgroundColor: hexToRgba(c.accent, 0.16) }}
+                      >
+                        <Icon className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: c.accent }} />
+                      </span>
+                      <div className="min-w-0 flex-1 sm:flex-none">
+                        <p className="font-body text-[9.5px] font-semibold uppercase tracking-[0.18em] text-white/55 sm:text-[10px] sm:tracking-[0.2em]">{label}</p>
+                        <p className="font-display mt-0.5 text-[15px] font-bold leading-snug text-white sm:mt-1.5 sm:text-lg">{value}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
 
                 {hasContent(t.invitation.availabilityText) && (
-                  <div className="mt-6 flex items-center justify-center gap-2.5 text-center">
+                  <div className="mt-5 flex items-center justify-center gap-2 text-center sm:mt-6 sm:gap-2.5">
                     <CheckCircle2 className="h-4 w-4 flex-shrink-0" style={{ color: c.accent }} />
-                    <p className="font-body text-sm text-white/75">{t.invitation.availabilityText}</p>
+                    <p className="font-body text-[13px] text-white/75 sm:text-sm">{t.invitation.availabilityText}</p>
                   </div>
                 )}
 
-                <div className="mt-7 flex flex-col items-center gap-3">
+                <div className="mt-6 flex flex-col items-center gap-3 sm:mt-7">
                   {t.invitation.buttonAction === "url" ? (
                     <a
                       href={resolveLink(t.invitation.buttonLink)}
@@ -3650,25 +3660,28 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <SectionHeading title={pr.title} subtitle={pr.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-6" />
               {items.length > 0 && (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
                   {items.map((item, i) => (
                     <div
                       key={i}
                       // Stacks and centers on phones, goes back to an icon-beside-text
                       // row from sm up.
-                      className="lt-reveal lt-card flex flex-col items-center gap-3 rounded-[22px] p-5 text-center sm:flex-row sm:items-start sm:gap-4 sm:p-6 sm:text-left"
+                      // Icon-left row at every width. Stacking and centring these
+                      // on phones made each card roughly twice as tall for no
+                      // gain — six of them dominated the scroll.
+                      className="lt-reveal lt-card flex items-start gap-3 rounded-[18px] p-4 text-left sm:gap-4 sm:rounded-[22px] sm:p-6"
                       style={{ ["--lt-i" as string]: i % 3, backgroundColor: surface, border: `1px solid ${hairline}`, boxShadow: cardShadow }}
                     >
                       <span
-                        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl sm:h-11 sm:w-11"
+                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 sm:rounded-2xl"
                         style={{ backgroundColor: hexToRgba(c.accent, 0.12) }}
                       >
-                        <ProgramIcon name={item.icon} className="h-5 w-5" style={{ color: c.accent } as React.CSSProperties} />
+                        <ProgramIcon name={item.icon} className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: c.accent } as React.CSSProperties} />
                       </span>
                       <div className="min-w-0">
-                        <h3 className="font-body text-[15px] font-semibold leading-snug sm:text-base" style={{ color: ink }}>{item.title}</h3>
+                        <h3 className="font-body text-sm font-semibold leading-snug sm:text-base" style={{ color: ink }}>{item.title}</h3>
                         {hasContent(item.description) && (
-                          <p className="font-body mt-1.5 text-sm leading-relaxed" style={{ color: muted }}>{item.description}</p>
+                          <p className="font-body mt-1 text-[13px] leading-relaxed sm:mt-1.5 sm:text-sm" style={{ color: muted }}>{item.description}</p>
                         )}
                       </div>
                     </div>
@@ -3685,7 +3698,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                         {pr.impactTitle}
                       </h3>
                     )}
-                    <ul className="mt-6 grid grid-cols-1 gap-x-8 gap-y-3.5 sm:grid-cols-2">
+                    <ul className="mt-5 grid grid-cols-1 gap-x-8 gap-y-2.5 sm:mt-6 sm:grid-cols-2 sm:gap-y-3.5">
                       {impacts.map((line, i) => (
                         <li key={i} className="flex gap-3">
                           <span
@@ -3694,7 +3707,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                           >
                             <X className="h-3 w-3 text-white" />
                           </span>
-                          <span className="font-body text-sm leading-relaxed text-white/75">{line}</span>
+                          <span className="font-body text-[13px] leading-relaxed text-white/75 sm:text-sm">{line}</span>
                         </li>
                       ))}
                     </ul>
