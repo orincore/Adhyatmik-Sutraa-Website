@@ -26,8 +26,16 @@ export async function GET(
   const invitations = await InvitationRequest.find({
     landing_page_slug: (window as any).landing_page_slug,
     created_at: { $gte: (window as any).registration_start, $lte: (window as any).registration_end },
+    // Enrolled only. This feed drives the reminder emails and the join link, so
+    // a paid webinar must never leak them to someone whose payment is still
+    // pending or failed. Rows predating the payment fields have no
+    // payment_status at all, hence the $exists:false arm.
+    $or: [
+      { payment_status: { $in: ["not_required", "paid"] } },
+      { payment_status: { $exists: false } },
+    ],
   })
-    .select("first_name email whatsapp_number location created_at")
+    .select("first_name email whatsapp_number location payment_status amount created_at")
     .sort({ created_at: 1 })
     .lean();
 

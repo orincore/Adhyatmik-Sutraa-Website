@@ -2990,6 +2990,69 @@ export function TemplateEditor({
           />
         </div>
 
+        {/* Free vs paid. A paid webinar sends the registrant through Razorpay
+            and only enrols them once the payment verifies on the server. */}
+        <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 space-y-2">
+          <div>
+            <Label className="text-xs text-gray-600 font-medium">Webinar type</Label>
+            <select
+              value={data.invitation.pricingMode ?? "free"}
+              onChange={(e) => update("invitation", { pricingMode: e.target.value as "free" | "paid" })}
+              className="h-8 w-full rounded-md border border-gray-200 bg-white px-2 text-xs mt-1"
+            >
+              <option value="free">Free — register instantly</option>
+              <option value="paid">Paid — pay to reserve a seat</option>
+            </select>
+          </div>
+
+          {data.invitation.pricingMode === "paid" && (
+            <>
+              <div className="grid gap-2 grid-cols-2">
+                <div>
+                  <Label className="text-xs text-gray-500">Amount (₹)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={data.invitation.amount ?? ""}
+                    onChange={(e) => update("invitation", { amount: e.target.value === "" ? undefined : Number(e.target.value) })}
+                    className="h-8 text-xs mt-1 bg-white border-gray-200"
+                    placeholder="499"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">Was (₹, optional)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={data.invitation.originalAmount ?? ""}
+                    onChange={(e) => update("invitation", { originalAmount: e.target.value === "" ? undefined : Number(e.target.value) })}
+                    className="h-8 text-xs mt-1 bg-white border-gray-200"
+                    placeholder="1999"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">Pay button text</Label>
+                <Input
+                  value={data.invitation.payButtonText ?? ""}
+                  onChange={(e) => update("invitation", { payButtonText: e.target.value })}
+                  className="h-8 text-xs mt-1 bg-white border-gray-200"
+                  placeholder={`Pay ₹${data.invitation.amount || 499}`}
+                />
+              </div>
+              {!(Number(data.invitation.amount) > 0) && (
+                <p className="text-[11px] text-amber-600">
+                  Set an amount above 0, or this webinar stays free.
+                </p>
+              )}
+              <p className="text-[11px] text-gray-500">
+                Registrants are only enrolled after payment succeeds. Set every CTA on
+                the page to &ldquo;Open invitation form&rdquo; so they reach it.
+              </p>
+            </>
+          )}
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <Label className="text-xs text-gray-500">Badge Emoji</Label>

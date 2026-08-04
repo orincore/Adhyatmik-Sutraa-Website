@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { CalendarDays, Clock3, MapPin, CheckCircle2, ChevronLeft, ChevronRight, Zap, Radio, FlaskConical, BookOpen, Star, Heart, Leaf, Sun, Moon, Sparkles, Target, Trophy, Users, Brain, Lightbulb, Shield, Flame, Gem, Music, Globe, Camera, Smile, Coffee, Rocket, Award, MessageSquare, Lock, GripVertical, ArrowUp, ArrowDown, Eye, EyeOff, Settings2, Plus, Copy, Trash2, Instagram, Facebook, Youtube, Linkedin, Twitter, MessageCircle, Hourglass, Languages, ShieldCheck, RefreshCcw, BadgeCheck, Wallet, TrendingUp, AlertTriangle, Video, Gift, PlayCircle, CircleDollarSign, Frown, CloudRain, Ban, Infinity as InfinityIcon, Headphones, Ticket, Check, X, Loader2 } from "lucide-react";
 import { DynamicPageRenderer } from "@/components/storefront/dynamic-page-renderer";
+import { siteConfig } from "@/config/site.config";
 
 // Icon resolver for why-section cards
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -144,7 +145,7 @@ function SectionHeading({
       {hasContent(subtitle) && (
         <p
           className="lt-reveal font-body mt-4 text-base sm:text-lg leading-relaxed"
-          style={{ ["--lt-i" as string]: 2, color: onDark ? "rgba(255,255,255,0.74)" : "#4B5563" }}
+          style={{ ["--lt-i" as string]: 2, color: onDark ? "#ffffff" : "#4B5563" }}
         >
           {subtitle}
         </p>
@@ -706,9 +707,14 @@ function Marquee({ items, color, accent }: { items: string[]; color: string; acc
 // Video Testimonials Slider — 1 card mobile / 3 cards desktop, same pattern
 // as Featured Products. Active (most visible) card plays, others pause.
 // ---------------------------------------------------------------------------
-function VideoTestimonialsSlider({ items, primaryColor }: {
+function VideoTestimonialsSlider({ items, primaryColor, autoplay = true, muted = true }: {
   items: { url: string; name: string; role: string }[];
   primaryColor: string;
+  // The slider used to hard-code autoplay+muted+loop, so the Style tab's media
+  // settings had no effect on it. Sound-on autoplay is blocked by browsers
+  // anyway, so when autoplay is on the embed stays muted regardless.
+  autoplay?: boolean;
+  muted?: boolean;
 }) {
   const n = items.length;
 
@@ -856,12 +862,16 @@ function VideoTestimonialsSlider({ items, primaryColor }: {
           const ytId = type === "youtube" ? extractYTId(item.url) : null;
           const igId = type === "instagram" ? extractIGId(item.url) : null;
 
+          const shouldAutoplay = autoplay && isActive;
+          // Autoplay only works muted; with autoplay off, mute follows the
+          // setting so a tapped video plays with sound. loop follows autoplay
+          // so a non-autoplaying video doesn't restart itself forever.
+          const embedMuted = shouldAutoplay ? true : muted;
           const ytSrc = ytId
-            ? `https://www.youtube.com/embed/${ytId}?${isActive ? "autoplay=1&" : ""}mute=1&loop=1&playlist=${ytId}&rel=0&modestbranding=1&playsinline=1`
+            ? `https://www.youtube.com/embed/${ytId}?autoplay=${shouldAutoplay ? "1" : "0"}&mute=${embedMuted ? "1" : "0"}&loop=${autoplay ? "1" : "0"}&playlist=${ytId}&rel=0&modestbranding=1&playsinline=1`
             : null;
-          // Instagram embed with autoplay
           const igSrc = igId
-            ? `https://www.instagram.com/p/${igId}/embed/?autoplay=1&muted=1`
+            ? `https://www.instagram.com/p/${igId}/embed/?autoplay=${autoplay ? "1" : "0"}&muted=${embedMuted ? "1" : "0"}`
             : null;
 
           return (
@@ -1647,6 +1657,23 @@ function VideoWithControls({
 // THIS component — not the whole landing page (hero, carousels, 16 iframes…).
 // That whole-page re-render-per-keystroke was the "page keeps refreshing /
 // can't submit" production bug.
+const formatInr = (n: number) =>
+  `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+
+// Razorpay's checkout script is only fetched when someone actually opens a paid
+// form, so free pages never pay for it.
+function loadRazorpayCheckout(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve(false);
+    if ((window as any).Razorpay) return resolve(true);
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
 function InvitationDialog({
   open,
   onOpenChange,
@@ -1672,6 +1699,16 @@ function InvitationDialog({
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Paid webinars route through Razorpay before anyone is enrolled. The amount
+  // shown here is display only — the server re-reads it from the saved page.
+  const paidAmount = Number(invitation.amount) || 0;
+  const isPaidWebinar = invitation.pricingMode === "paid" && paidAmount > 0;
+  const submitLabel = isPaidWebinar
+    ? hasContent(invitation.payButtonText)
+      ? invitation.payButtonText!
+      : `Pay ${formatInr(paidAmount)}`
+    : invitation.formButtonText;
 
   const update = (field: keyof ReturnType<typeof createEmpty>, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -1812,22 +1849,7 @@ function InvitationDialog({
       location: form.location.trim(),
     };
 
-    try {
-      if (isPreviewMode) {
-        await new Promise((resolve) => setTimeout(resolve, 600));
-        setSuccess(true);
-        setForm(createEmpty());
-        return;
-      }
-      const res = await fetch("/api/invitations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Something went wrong. Please try again.");
-      }
+    const goToThankYou = () => {
       const thankYouData = {
         title: invitation.successTitle,
         description: invitation.successDescription,
@@ -1837,10 +1859,132 @@ function InvitationDialog({
       sessionStorage.setItem("thankYouData", JSON.stringify(thankYouData));
       router.push(`/${pageSlug}/thank-you`);
       setForm(createEmpty());
+    };
+
+    try {
+      if (isPreviewMode) {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        setSuccess(true);
+        setForm(createEmpty());
+        return;
+      }
+
+      if (isPaidWebinar) {
+        // 1. Reserve a pending registration and open a Razorpay order. No
+        //    amount is sent — the server prices it from the saved page.
+        const createRes = await fetch("/api/invitations/create-payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const createData = await createRes.json().catch(() => ({}));
+        if (!createRes.ok) {
+          throw new Error(createData.error || "Unable to start payment. Please try again.");
+        }
+
+        // 2. Load the gateway.
+        const loaded = await loadRazorpayCheckout();
+        if (!loaded) {
+          throw new Error("Couldn't load the payment gateway. Check your connection and try again.");
+        }
+
+        // 3. Get out of Razorpay's way before it opens.
+        //    Razorpay mounts its sheet on document.body, i.e. outside this
+        //    dialog. Radix's modal marks everything outside the dialog
+        //    inert (pointer-events:none + aria-hidden + focus trap), and the
+        //    scroll lock above cancels touchmove anywhere but the form's own
+        //    scroller — between them the sheet renders but nothing in it can
+        //    be tapped. Closing first hands the screen over cleanly.
+        //    onOpenChange, not handleOpenChange, so the details they typed
+        //    survive for a retry.
+        onOpenChange(false);
+        // Let Radix unmount and undo its body styles before the sheet mounts.
+        await new Promise((r) => setTimeout(r, 280));
+        if (typeof document !== "undefined") {
+          // Belt and braces: if an exit animation is still in flight the body
+          // can briefly keep pointer-events:none, which swallows the first tap.
+          document.body.style.pointerEvents = "";
+        }
+
+        // 4. Hand off to Razorpay, then verify server-side before enrolling.
+        await new Promise<void>((resolve) => {
+          const rzp = new (window as any).Razorpay({
+            key: createData.key_id,
+            amount: createData.amount,
+            currency: createData.currency,
+            name: siteConfig.razorpayDisplayName,
+            description: createData.webinarTitle,
+            order_id: createData.razorpay_order_id,
+            prefill: {
+              name: payload.firstName,
+              email: payload.email,
+              contact: payload.whatsappNumber,
+            },
+            theme: { color: accentColor },
+            handler: async (response: any) => {
+              try {
+                const verifyRes = await fetch("/api/invitations/verify-payment", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_signature: response.razorpay_signature,
+                    invitationId: createData.invitationId,
+                  }),
+                });
+                const verifyData = await verifyRes.json().catch(() => ({}));
+                if (!verifyRes.ok) {
+                  throw new Error(verifyData.error || "We couldn't confirm your payment.");
+                }
+                goToThankYou();
+              } catch (verifyErr: any) {
+                // Money may well have left their account here, so never imply
+                // the payment failed — point them at support with the id.
+                setError(
+                  `${verifyErr.message || "We couldn't confirm your payment."} If you were charged, contact us with payment id ${response?.razorpay_payment_id || "(unknown)"} and we'll sort it out.`
+                );
+                setLoading(false);
+                // Bring the form back so the message is actually visible.
+                onOpenChange(true);
+              } finally {
+                resolve();
+              }
+            },
+            modal: {
+              // Closing the sheet is a cancellation, not an error. Reopen the
+              // form with their details intact so retrying is one tap.
+              ondismiss: () => {
+                setLoading(false);
+                onOpenChange(true);
+                resolve();
+              },
+            },
+          });
+          rzp.open();
+        });
+        return;
+      }
+
+      const res = await fetch("/api/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Something went wrong. Please try again.");
+      }
+      goToThankYou();
     } catch (err: any) {
       setError(err.message || "Unable to submit right now. Please try again later.");
-    } finally {
+      // Covers the paid branch failing before the sheet ever opens, which the
+      // finally below deliberately skips.
       setLoading(false);
+    } finally {
+      // The paid branch owns its own spinner once the sheet is up: it has to
+      // stay on through Razorpay and only clear on dismiss or verification.
+      if (!isPaidWebinar) setLoading(false);
     }
   };
 
@@ -1860,7 +2004,7 @@ function InvitationDialog({
                 {invitation.subtitle}
               </DialogDescription>
             </DialogHeader>
-            <div className="flex flex-wrap gap-2 mt-4">
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
               {invitation.formHighlights.map((item, i) => (
                 <span key={i} className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide bg-purple-100 text-purple-600 px-2.5 sm:px-3 py-1 rounded-full">
                   ✓ {item}
@@ -1868,35 +2012,43 @@ function InvitationDialog({
               ))}
             </div>
 
-            <form className="mt-6 space-y-3.5 sm:space-y-4" onSubmit={handleSubmit}>
+            {/* Placeholder-only by request. Labels are kept as sr-only rather
+                than deleted: screen readers and browser autofill both rely on
+                them, and a placeholder vanishes the moment someone types. */}
+            <form className="mt-5 space-y-2.5" onSubmit={handleSubmit}>
               <div>
-                <Label className="text-xs text-gray-500">Your First Name</Label>
+                <Label htmlFor="lt-inv-name" className="sr-only">First name</Label>
                 <Input
+                  id="lt-inv-name"
                   value={form.firstName}
                   onChange={(e) => update("firstName", e.target.value)}
-                  placeholder="Enter your name"
-                  className="h-10 sm:h-11 mt-1 rounded-xl text-base sm:text-sm"
+                  placeholder="First name"
+                  autoComplete="given-name"
+                  className="h-11 rounded-xl text-base sm:text-sm"
                   required
                 />
               </div>
               <div>
-                <Label className="text-xs text-gray-500">Your Best Email</Label>
+                <Label htmlFor="lt-inv-email" className="sr-only">Email</Label>
                 <Input
+                  id="lt-inv-email"
                   type="email"
                   value={form.email}
                   onChange={(e) => update("email", e.target.value)}
-                  placeholder="you@example.com"
-                  className="h-10 sm:h-11 mt-1 rounded-xl text-base sm:text-sm"
+                  placeholder="Email"
+                  autoComplete="email"
+                  className="h-11 rounded-xl text-base sm:text-sm"
                   required
                 />
               </div>
               <div>
-                <Label className="text-xs text-gray-500">WhatsApp Number</Label>
-                <div className="flex gap-2 mt-1">
+                <Label htmlFor="lt-inv-whatsapp" className="sr-only">WhatsApp number</Label>
+                <div className="flex gap-2">
                   <select
+                    aria-label="Country code"
                     value={form.countryCode}
                     onChange={(e) => update("countryCode", e.target.value)}
-                    className="h-10 sm:h-11 rounded-xl border border-input bg-background px-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-ring w-[80px] sm:w-[90px] flex-shrink-0"
+                    className="h-11 rounded-xl border border-input bg-background px-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-ring w-[80px] sm:w-[90px] flex-shrink-0"
                   >
                     <option value="+91">🇮🇳 +91</option>
                     <option value="+1">🇺🇸 +1</option>
@@ -1919,22 +2071,26 @@ function InvitationDialog({
                     <option value="+977">🇳🇵 +977</option>
                   </select>
                   <Input
+                    id="lt-inv-whatsapp"
                     value={form.whatsapp}
                     onChange={(e) => update("whatsapp", e.target.value)}
-                    placeholder="98765 43210"
-                    className="h-10 sm:h-11 rounded-xl flex-1 text-base sm:text-sm"
+                    placeholder="WhatsApp number"
+                    autoComplete="tel-national"
+                    className="h-11 rounded-xl flex-1 text-base sm:text-sm"
                     type="tel"
                     required
                   />
                 </div>
               </div>
               <div>
-                <Label className="text-xs text-gray-500">Location (City, Country)</Label>
+                <Label htmlFor="lt-inv-location" className="sr-only">Location (city, country)</Label>
                 <Input
+                  id="lt-inv-location"
                   value={form.location}
                   onChange={(e) => update("location", e.target.value)}
-                  placeholder="e.g. Mumbai, India"
-                  className="h-10 sm:h-11 mt-1 rounded-xl text-base sm:text-sm"
+                  placeholder="Location (city, country)"
+                  autoComplete="address-level2"
+                  className="h-11 rounded-xl text-base sm:text-sm"
                 />
               </div>
 
@@ -1969,18 +2125,20 @@ function InvitationDialog({
                     {loading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                        Confirming…
+                        {isPaidWebinar ? "Opening payment…" : "Confirming…"}
                       </>
                     ) : (
                       <>
-                        {invitation.formButtonText}
+                        {submitLabel}
                         <CtaArrow className="ml-0" />
                       </>
                     )}
                   </button>
                   <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-gray-500">
                     <Lock className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
-                    Your details stay private. No spam, ever.
+                    {isPaidWebinar
+                      ? "Secure payment via Razorpay. Your seat is confirmed the moment it succeeds."
+                      : "Your details stay private. No spam, ever."}
                   </p>
                 </div>
               )}
@@ -2441,7 +2599,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                   )}
                 </h1>
                 {hasContent(t.hero.subheadline) && (
-                  <p className="lt-rise font-body max-w-2xl text-base sm:text-lg leading-relaxed text-white/75" style={{ ["--lt-i" as string]: 2 }}>
+                  <p className="lt-rise font-body max-w-2xl text-base sm:text-lg leading-relaxed text-white" style={{ ["--lt-i" as string]: 2 }}>
                     {t.hero.subheadline}
                   </p>
                 )}
@@ -2550,7 +2708,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
                 {hasContent(t.hero.subheadline) && (
                   <p
-                    className="lt-rise font-body mx-auto mt-7 max-w-2xl text-base sm:text-lg leading-relaxed text-white/75"
+                    className="lt-rise font-body mx-auto mt-7 max-w-2xl text-base sm:text-lg leading-relaxed text-white"
                     style={{ ["--lt-i" as string]: 3 }}
                   >
                     {t.hero.subheadline}
@@ -2562,7 +2720,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                     {t.hero.bulletPoints.filter(Boolean).map((point, i) => (
                       <li
                         key={i}
-                        className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs sm:text-sm font-body text-white/85 backdrop-blur-sm"
+                        className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs sm:text-sm font-body text-white backdrop-blur-sm"
                         style={{ backgroundColor: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}
                       >
                         <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" style={{ color: c.accent }} />
@@ -2651,15 +2809,20 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           // cell with no image becomes an accent-washed type tile, which gives
           // the grid real material variation without inventing content to fill.
           const tinted = whyBento && !featured && !hasContent(point.image);
+          // object-contain, not cover. These are brand posters with the
+          // headline baked into the artwork, and a square poster in a wide
+          // bento box was losing half of itself to the crop. Contained on a
+          // tinted plinth nothing is lost, and it reads as a deliberate
+          // product shot rather than a botched crop.
           const pointMedia = renderMedia(point.image, mediaKey("why", "points", i, "image"), {
-            className: "w-full h-full object-cover",
+            className: "w-full h-full object-contain",
             alt: point.title,
           });
           return (
             <div
               key={i}
               className={`lt-reveal lt-card lt-zoom group overflow-hidden rounded-[20px] sm:rounded-[26px] ${
-                featured ? "lg:col-span-3 lg:flex lg:flex-col" : whyBento ? "lg:flex lg:flex-1 lg:flex-col" : ""
+                featured ? "lg:col-span-3" : whyBento ? "lg:flex lg:flex-col" : ""
               }`}
               style={{
                 ["--lt-i" as string]: i,
@@ -2675,17 +2838,21 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             >
               {pointMedia && (
                 <div
-                  // The feature image is capped rather than stretched: filling
-                  // the full column height over-crops a poster-shaped graphic.
-                  // The stacked pair does grow, which is what lets that column
-                  // match the feature's height with no dead space.
+                  // Boxes are sized so a contained image still fills most of
+                  // them: the feature gets a near-square well (its posters are
+                  // 1:1), the stacked pair a 3:2 well.
                   className={`overflow-hidden ${
                     featured
-                      ? "h-52 sm:h-64 lg:h-[340px]"
+                      ? "aspect-[4/3] sm:aspect-[16/11] lg:aspect-[7/5]"
                       : whyBento
-                        ? "h-40 sm:h-52 lg:h-auto lg:min-h-[130px] lg:flex-1"
+                        ? "aspect-[16/10] lg:aspect-[3/2]"
                         : "h-44 sm:h-56"
                   }`}
+                  style={
+                    whyBento
+                      ? { backgroundColor: hexToRgba(c.primary, 0.06) }
+                      : undefined
+                  }
                 >
                   {pointMedia}
                 </div>
@@ -3191,6 +3358,10 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             <VideoTestimonialsSlider
               items={videoTestimonialItems}
               primaryColor={c.accent}
+              // Driven by the first item's media settings, since the slider
+              // shares one embed policy across all of its slides.
+              autoplay={(mediaSettings[mediaKey("videoTestimonials", "items", 0, "url")] ?? DEFAULT_MEDIA_SETTINGS).autoplay}
+              muted={(mediaSettings[mediaKey("videoTestimonials", "items", 0, "url")] ?? DEFAULT_MEDIA_SETTINGS).mute}
             />
           </div>
         </section>
@@ -3315,7 +3486,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                   <div className="min-w-0 sm:mt-6">
                     <h3 className="font-display text-[15px] font-bold leading-snug text-white sm:text-xl">{item.title}</h3>
                     {hasContent(item.description) && (
-                      <p className="font-body mt-1.5 text-[13px] leading-relaxed text-white/65 sm:mt-2 sm:text-sm">{item.description}</p>
+                      <p className="font-body mt-1.5 text-[13px] leading-relaxed text-white sm:mt-2 sm:text-sm">{item.description}</p>
                     )}
                   </div>
                 </div>
@@ -3498,8 +3669,22 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 </div>
               );
             } else {
-              // image
-              return renderMedia(block.mediaUrl, blockKey);
+              // image — same aspect-video well as its video/YouTube siblings
+              // above, so blocks in this section don't jump around in height.
+              // object-contain, not cover: these blocks are used for both
+              // photos and brand posters with copy baked into the artwork,
+              // and cover was cropping poster text off (see the 'why'
+              // section's identical fix for the same failure mode).
+              return (
+                <div
+                  className="relative w-full aspect-video overflow-hidden rounded-xl shadow-lg"
+                  style={{ backgroundColor: hexToRgba(c.primary, 0.06) }}
+                >
+                  {renderMedia(block.mediaUrl, blockKey, {
+                    className: "absolute inset-0 w-full h-full object-contain",
+                  })}
+                </div>
+              );
             }
           };
 
@@ -4284,7 +4469,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             </h2>
             {hasContent(t.footer.cta.subtitle) && (
               <p
-                className="lt-reveal font-body mx-auto mt-5 max-w-2xl text-base sm:text-lg leading-relaxed text-white/70"
+                className="lt-reveal font-body mx-auto mt-5 max-w-2xl text-base sm:text-lg leading-relaxed text-white"
                 style={{ ["--lt-i" as string]: 2 }}
               >
                 {t.footer.cta.subtitle}
@@ -4653,7 +4838,16 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       {floatingButtonProps && (
         <div
           aria-hidden="true"
-          className={`${isCheckoutBar ? "h-[68px]" : "h-[88px]"} ${floatingOnDesktop ? "" : "md:hidden"}`}
+          className={`${
+            isCheckoutBar
+              // The countdown chips carry a label and unit captions, so a bar
+              // with one is taller than a bare price/note bar. Under-reserving
+              // here lets the strip cover the last rows of the footer.
+              ? hasContent(t.floatingButton.countdownTo)
+                ? "h-[88px]"
+                : "h-[68px]"
+              : "h-[88px]"
+          } ${floatingOnDesktop ? "" : "md:hidden"}`}
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         />
       )}

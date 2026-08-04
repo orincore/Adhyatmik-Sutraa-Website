@@ -45,12 +45,21 @@ export async function POST(
     whatsappGroupLink = buttons?.find((b) => b.icon === "whatsapp" && b.url)?.url;
   }
 
+  // Preview the receipt variant when this page charges, so the admin sees what
+  // a paying registrant actually gets rather than the free-webinar wording.
+  const invitation = (page as any)?.content?.templateData?.invitation;
+  const previewAmount = Number(invitation?.amount);
+  const isPaid = invitation?.pricingMode === "paid" && Number.isFinite(previewAmount) && previewAmount > 0;
+
   const { subject, html } = buildInvitationConfirmationEmail({
     firstName: "Test User",
     email: to,
     whatsappNumber: "+91 98765 43210",
     location: "Mumbai",
     whatsappGroupLink,
+    payment: isPaid
+      ? { amount: previewAmount, currency: "INR", paymentId: "pay_TESTPREVIEW123" }
+      : undefined,
   });
 
   try {

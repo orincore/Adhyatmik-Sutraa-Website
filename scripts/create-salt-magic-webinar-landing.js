@@ -57,7 +57,14 @@ const COLORS = {
   bodyBg: "#FFFFFF",
 };
 
+// Kept only as the link target behind the CTAs; the buttons themselves now
+// open the on-site invitation form, which charges through our own Razorpay
+// integration (/api/invitations/create-payment) rather than this hosted page.
 const REGISTER_URL = "https://rzp.io/rzp/salt-magic-masterclass";
+
+// Seat price, in whole rupees. This is the value the server re-reads at payment
+// time, so changing it here (or in the admin editor) changes what is charged.
+const SEAT_PRICE = 49;
 
 // Warm mineral paper — a tint of heroBg, used as a section background.
 const PAPER = "#F8F1F6";
@@ -111,8 +118,19 @@ const templateData = {
     "faq",
     "footer",
   ],
+  // Autoplay off, sound on. The template default is autoplay+muted, which on a
+  // funnel page means the hero video starts itself silently and loops (loop is
+  // tied to autoplay in YouTubeEmbed). With autoplay off, mute:false simply
+  // means it plays with sound when someone actually taps it.
+  // NOTE: the key that matters for the hero is "hero.heroMedia.0.url" — the
+  // carousel slide. "hero.heroImage" is only the fallback still.
   mediaSettings: {
-    "hero.heroImage": { autoplay: true, mute: true },
+    "hero.heroImage": { autoplay: false, mute: false },
+    "hero.heroMedia.0.url": { autoplay: false, mute: false },
+    "videoTestimonials.items.0.url": { autoplay: false, mute: false },
+    "videoTestimonials.items.1.url": { autoplay: false, mute: false },
+    "videoTestimonials.items.2.url": { autoplay: false, mute: false },
+    "videoTestimonials.items.3.url": { autoplay: false, mute: false },
   },
   colors: COLORS,
 
@@ -131,7 +149,7 @@ const templateData = {
     text: "Seats are filling fast! Reserve your spot now!!",
     ctaText: "Register Now",
     ctaLink: REGISTER_URL,
-    ctaAction: "url",
+    ctaAction: "invitation",
     countdownTo: WEBINAR_START_ISO,
     countdownLabel: "Webinar starts in",
     sticky: true,
@@ -151,7 +169,7 @@ const templateData = {
     ],
     ctaButtonText: "Register Now",
     ctaButtonLink: REGISTER_URL,
-    ctaButtonAction: "url",
+    ctaButtonAction: "invitation",
     heroImage: IMG.webinarPoster,
     heroMedia: [{ url: "https://youtu.be/CE77pav0S0o", label: "Salt Magic Webinar" }],
     carouselAutoplay: false,
@@ -194,7 +212,7 @@ const templateData = {
     seatsFilledPercent: 0,
     ctaButtonText: "Register Now",
     ctaButtonLink: REGISTER_URL,
-    ctaButtonAction: "url",
+    ctaButtonAction: "invitation",
     visible: true,
   },
 
@@ -277,7 +295,7 @@ const templateData = {
     ],
     ctaButtonText: "Register Now",
     ctaButtonLink: REGISTER_URL,
-    ctaButtonAction: "url",
+    ctaButtonAction: "invitation",
     visible: true,
   },
 
@@ -324,7 +342,7 @@ const templateData = {
     ],
     ctaButtonText: "Register Now",
     ctaButtonLink: REGISTER_URL,
-    ctaButtonAction: "url",
+    ctaButtonAction: "invitation",
     backgroundImage: "",
     cardStyle: "lightOnDark",
     visible: true,
@@ -370,6 +388,10 @@ const templateData = {
 
   invitation: {
     enabled: true,
+    pricingMode: "paid",
+    amount: SEAT_PRICE,
+    originalAmount: 0,
+    payButtonText: `Pay ₹${SEAT_PRICE} & Reserve My Seat`,
     badgeEmoji: "🔥",
     badgeText: "Filling Fast",
     title: "Live Salt Magic Webinar",
@@ -383,9 +405,9 @@ const templateData = {
     availabilityText: "Coach: Dr. Aparna Singh • Seats are filling fast!",
     buttonText: "Register Now",
     buttonLink: REGISTER_URL,
-    buttonAction: "url",
+    buttonAction: "invitation",
     formTitle: "Register for the Salt Magic Webinar",
-    formHighlights: ["Live", "Limited Seats", "Free Bonus eBooks"],
+    formHighlights: ["Live on Zoom", "Limited Seats", "Free Bonus eBooks"],
     formButtonText: "Reserve My Seat",
     successTitle: "You're registered!",
     successDescription: "We'll send your private session link via email and WhatsApp shortly.",
@@ -472,7 +494,7 @@ const templateData = {
         "Create salts which are impactful, soulful and sell like crazy. Seats are filling fast! Reserve your spot now!!",
       ctaButtonText: "Register Now",
       ctaButtonLink: REGISTER_URL,
-      ctaButtonAction: "url",
+      ctaButtonAction: "invitation",
       showCtaButton: true,
     },
     copyright: `© ${new Date().getFullYear()} Adhyatmik Sutraa. All Rights Reserved.`,
@@ -491,6 +513,9 @@ const templateData = {
     enabled: true,
     section: "invitation",
     variant: "bar",
+    // Price deliberately not repeated here: stacked under the countdown
+    // chips it cramped the strip and made it outgrow its spacer. The
+    // form states the amount clearly enough.
     priceText: "",
     strikePriceText: "",
     noteText: "",

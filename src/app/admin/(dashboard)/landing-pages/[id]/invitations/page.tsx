@@ -54,8 +54,20 @@ interface InvitationRequest {
   email: string;
   whatsapp_number: string | null;
   location: string | null;
+  payment_status?: "not_required" | "pending" | "paid" | "failed";
+  amount?: number | null;
+  razorpay_payment_id?: string | null;
   created_at: string;
 }
+
+// A pending or failed row is someone who opened the payment sheet and did not
+// complete it. They are NOT enrolled, so the list has to say so plainly rather
+// than showing them the same as everyone else.
+const PAYMENT_BADGE: Record<string, { label: string; className: string }> = {
+  paid: { label: "Paid", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  pending: { label: "Payment pending", className: "bg-amber-50 text-amber-700 border-amber-200" },
+  failed: { label: "Payment failed", className: "bg-red-50 text-red-600 border-red-200" },
+};
 
 const TIMEZONES = ["Asia/Kolkata", "UTC", "America/New_York", "Europe/London"];
 
@@ -257,12 +269,15 @@ export default function LandingPageInvitationsPage() {
   }, []);
 
   const downloadCSV = useCallback(() => {
-    const headers = ["Name", "Email", "WhatsApp", "Location", "Submitted At"];
+    const headers = ["Name", "Email", "WhatsApp", "Location", "Payment", "Amount", "Payment ID", "Submitted At"];
     const rows = filteredInvitations.map((inv) => [
       inv.first_name,
       inv.email,
       inv.whatsapp_number || "",
       inv.location || "",
+      inv.payment_status === "not_required" || !inv.payment_status ? "Free" : PAYMENT_BADGE[inv.payment_status]?.label || inv.payment_status,
+      inv.amount ? String(inv.amount) : "",
+      inv.razorpay_payment_id || "",
       fmt(inv.created_at),
     ]);
     const csvContent = [headers.join(","), ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join("\n");
@@ -438,6 +453,12 @@ export default function LandingPageInvitationsPage() {
                     <div>
                       <div className="flex items-center gap-3">
                         <p className="text-base font-semibold text-gray-900">{inv.first_name}</p>
+                        {inv.payment_status && inv.payment_status !== "not_required" && PAYMENT_BADGE[inv.payment_status] && (
+                          <Badge variant="outline" className={`text-[11px] ${PAYMENT_BADGE[inv.payment_status].className}`}>
+                            {PAYMENT_BADGE[inv.payment_status].label}
+                            {inv.amount ? ` · ₹${inv.amount}` : ""}
+                          </Badge>
+                        )}
                         {inv.location && (
                           <Badge variant="outline" className="text-[11px] flex items-center gap-1">
                             {inv.location}

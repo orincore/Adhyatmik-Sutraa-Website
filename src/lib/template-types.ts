@@ -334,6 +334,14 @@ export interface ThankYouButton {
 
 export interface InvitationSection {
   enabled: boolean;
+  // Free webinars register straight from the form. Paid ones create a Razorpay
+  // order first and only enrol the registrant once the signature verifies
+  // server-side. `amount` is in whole rupees and is ALWAYS re-read from the
+  // saved page server-side at payment time — the client's copy is display only.
+  pricingMode?: "free" | "paid";
+  amount?: number;
+  originalAmount?: number;      // struck through beside `amount` when higher
+  payButtonText?: string;       // defaults to "Pay ₹<amount>"
   badgeEmoji: string;
   badgeText: string;
   title: string;
@@ -954,6 +962,10 @@ export const DEFAULT_TEMPLATE_DATA: LandingTemplateData = {
   },
   invitation: {
     enabled: true,
+    pricingMode: "free",
+    amount: 0,
+    originalAmount: 0,
+    payButtonText: "",
     badgeEmoji: "🔥",
     badgeText: "Filling Fast",
     title: "Request Your Invitation",
