@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { EditorContent } from "@tiptap/react";
-import type { LandingTemplateData, RichBlockEntry, TestimonialItem } from "@/lib/template-types";
+import type { LandingTemplateData, RichBlockEntry, TestimonialItem, WhySection } from "@/lib/template-types";
 import {
   DEFAULT_MEDIA_SETTINGS,
   normalizeTemplateData,
@@ -157,7 +157,7 @@ function SectionHeading({
 // identical everywhere.
 function CtaArrow({ className = "" }: { className?: string }) {
   return (
-    <svg className={`ml-2 h-4 w-4 transition-transform duration-300 group-hover/cta:translate-x-1 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+    <svg className={`ml-2 h-4 w-4 flex-shrink-0 transition-transform duration-300 group-hover/cta:translate-x-1 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
     </svg>
   );
@@ -167,9 +167,14 @@ function CtaArrow({ className = "" }: { className?: string }) {
 // sweep on hover. `as` keeps <a> vs <button> semantics intact.
 function ctaClass(size: "lg" | "md" = "lg") {
   return [
-    "lt-cta lt-focus group/cta relative inline-flex items-center justify-center rounded-full font-semibold text-white",
+    "lt-cta lt-focus group/cta relative inline-flex max-w-full items-center justify-center rounded-full text-center font-semibold leading-tight text-white",
     "shadow-lg",
-    size === "lg" ? "px-8 sm:px-10 py-4 text-base sm:text-lg" : "px-6 py-3 text-sm sm:text-base",
+    // Phone-first padding and type. At the old px-8/text-base a label like
+    // "Register Now For Live Webinar!" overflowed a card's inner width on a
+    // 390px screen and wrapped to two lines with the arrow stranded beside it.
+    size === "lg"
+      ? "px-5 py-3.5 text-[15px] sm:px-10 sm:py-4 sm:text-lg"
+      : "px-4 py-3 text-sm sm:px-6 sm:text-base",
   ].join(" ");
 }
 
@@ -395,6 +400,116 @@ function Countdown({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Stat values roll up from zero the first time they scroll into view. Motivated,
+// not decorative: on a funnel page these numbers ARE the argument ("45%+ higher
+// margins", "5 Days to launch"), so counting draws the eye to the claim rather
+// than to the layout.
+//
+// Renders the final string on the server, so with JS off, before hydration, or
+// under reduced motion the real number is what shows. Frames are written
+// straight to the DOM node — setState per frame would re-render the section
+// ~60 times a second.
+// ---------------------------------------------------------------------------
+function CountUpValue({ value, className, style }: { value: string; className?: string; style?: React.CSSProperties }) {
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof window === "undefined" || !("IntersectionObserver" in window)) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const parts = /^(\D*)(\d[\d,]*)(.*)$/.exec(value || "");
+    if (!parts) return;                       // "Zero", "Live on Zoom" — nothing to count
+    const grouped = parts[2].includes(",");
+    const target = Number(parts[2].replace(/,/g, ""));
+    if (!Number.isFinite(target) || target <= 0) return;
+
+    let raf = 0;
+    const io = new IntersectionObserver((entries) => {
+      if (!entries[0].isIntersecting) return;
+      io.disconnect();
+      const start = performance.now();
+      const tick = (now: number) => {
+        const p = Math.min(1, (now - start) / 1100);
+        const eased = 1 - Math.pow(1 - p, 3);
+        const n = Math.round(target * eased);
+        el.textContent = `${parts[1]}${grouped ? n.toLocaleString("en-IN") : n}${parts[3]}`;
+        if (p < 1) raf = requestAnimationFrame(tick);
+      };
+      el.textContent = `${parts[1]}0${parts[3]}`;
+      raf = requestAnimationFrame(tick);
+    }, { threshold: 0.4 });
+
+    io.observe(el);
+    return () => { io.disconnect(); cancelAnimationFrame(raf); };
+  }, [value]);
+
+  return <span ref={ref} className={className} style={style}>{value}</span>;
+}
+
+// ---------------------------------------------------------------------------
+// Countdown sized for the docked mobile bar: accent-lit chips with unit
+// captions, a live pulse dot, and a seconds chip that ticks. Separate from
+// <Countdown> because that one is tuned for full-width sections and its chips
+// go invisible against an already-dark strip.
+// ---------------------------------------------------------------------------
+function DockedCountdown({ target, label, accent }: { target?: string; label?: string; accent: string }) {
+  const time = useCountdown(target);
+  if (!time) return null;
+
+  const parts = [
+    ...(time.days > 0 ? [{ value: time.days, unit: "Days" }] : []),
+    { value: time.hours, unit: "Hrs" },
+    { value: time.minutes, unit: "Min" },
+    { value: time.seconds, unit: "Sec" },
+  ];
+
+  return (
+    <div className="min-w-0">
+      {hasContent(label) && (
+        <span className="mb-1 flex items-center gap-1.5">
+          <span className="relative flex h-1.5 w-1.5 flex-shrink-0">
+            <span className="lt-seat-ping absolute inline-flex h-full w-full rounded-full" style={{ backgroundColor: accent }} />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} />
+          </span>
+          <span
+            className="font-body truncate text-[9px] font-bold uppercase leading-none tracking-[0.18em] sm:text-[10px]"
+            style={{ color: accent }}
+          >
+            {label}
+          </span>
+        </span>
+      )}
+      <span className="flex items-center gap-[3px] sm:gap-1.5">
+        {parts.map((p, i) => (
+          <React.Fragment key={p.unit}>
+            {i > 0 && <span className="font-display text-[11px] font-bold leading-none text-white/25">:</span>}
+            <span
+              className={`flex min-w-[27px] flex-col items-center rounded-[9px] px-1 py-[3px] sm:min-w-[32px] sm:px-1.5 ${
+                p.unit === "Sec" ? "lt-tick" : ""
+              }`}
+              style={{
+                backgroundColor: hexToRgba(accent, 0.2),
+                border: `1px solid ${hexToRgba(accent, 0.5)}`,
+                boxShadow: `0 0 12px -4px ${hexToRgba(accent, 0.9)}`,
+              }}
+            >
+              <span className="font-display text-[15px] font-bold leading-none tabular-nums text-white sm:text-base">
+                {pad2(p.value)}
+              </span>
+              <span className="font-body mt-[3px] text-[6.5px] font-semibold uppercase leading-none tracking-[0.1em] text-white/60 sm:text-[7.5px]">
+                {p.unit}
+              </span>
+            </span>
+          </React.Fragment>
+        ))}
+      </span>
     </div>
   );
 }
@@ -1947,10 +2062,14 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
   const ink = onDarkBody ? "#FFFFFF" : "#111827";
   const muted = onDarkBody ? "rgba(255,255,255,0.70)" : "#4B5563";
   const surface = onDarkBody ? "rgba(255,255,255,0.05)" : "#FFFFFF";
-  const hairline = onDarkBody ? "rgba(255,255,255,0.12)" : "rgba(17,24,39,0.08)";
+  const hairline = onDarkBody ? "rgba(255,255,255,0.12)" : hexToRgba(c.secondary, 0.11);
+  // Light cards used a flat neutral drop shadow, which is what makes a card grid
+  // read as a generic template. This is a three-layer shadow tinted with the
+  // page's own deep token — a tight contact edge, a lift, and a wide ambient
+  // pool — so cards sit in the palette instead of on top of it.
   const cardShadow = onDarkBody
     ? "0 18px 44px -26px rgba(0,0,0,.9)"
-    : "0 18px 44px -28px rgba(17,24,39,.35)";
+    : `0 1px 2px ${hexToRgba(c.secondary, 0.07)}, 0 10px 22px -14px ${hexToRgba(c.secondary, 0.3)}, 0 30px 60px -42px ${hexToRgba(c.secondary, 0.5)}`;
 
   // Scroll choreography. Skipped entirely in the admin editor: the canvas is a
   // CSS-zoomed, independently-scrolled container, so IntersectionObserver
@@ -2015,6 +2134,13 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         return null;
     }
   })();
+
+  // The docked bar is far narrower than an in-page CTA, so it may carry its own
+  // shorter label rather than the full section button text.
+  const floatingCtaLabel =
+    hasContent(t.floatingButton?.ctaTextOverride)
+      ? t.floatingButton!.ctaTextOverride!
+      : floatingButtonProps?.label;
 
   const heroSlides = useMemo(() => {
     const slides = (t.hero.heroMedia || [])
@@ -2512,43 +2638,100 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           );
         }
 
+        // Exactly three points render as a 1+2 bento: one tall feature tile
+        // beside a stacked pair. Three identical cards in a row is the single
+        // most templated shape on the web, and the first point is always the
+        // strongest, so it earns the larger tile. Any other count keeps the
+        // plain grid, which stays correct for the other pages on this template.
+        const whyBento = t.why.points.length === 3;
+
+        const renderWhyCard = (point: WhySection["points"][number], i: number) => {
+          const featured = whyBento && i === 0;
+          // A bento of three photo cards is still three of the same thing. A
+          // cell with no image becomes an accent-washed type tile, which gives
+          // the grid real material variation without inventing content to fill.
+          const tinted = whyBento && !featured && !hasContent(point.image);
+          const pointMedia = renderMedia(point.image, mediaKey("why", "points", i, "image"), {
+            className: "w-full h-full object-cover",
+            alt: point.title,
+          });
+          return (
+            <div
+              key={i}
+              className={`lt-reveal lt-card lt-zoom group overflow-hidden rounded-[20px] sm:rounded-[26px] ${
+                featured ? "lg:col-span-3 lg:flex lg:flex-col" : whyBento ? "lg:flex lg:flex-1 lg:flex-col" : ""
+              }`}
+              style={{
+                ["--lt-i" as string]: i,
+                backgroundColor: surface,
+                ...(tinted
+                  ? {
+                      backgroundImage: `linear-gradient(150deg, ${hexToRgba(c.accent, 0.14)} 0%, ${hexToRgba(c.primary, 0.1)} 55%, ${hexToRgba(c.secondary, 0.06)} 100%)`,
+                    }
+                  : null),
+                border: `1px solid ${tinted ? hexToRgba(c.accent, 0.28) : hairline}`,
+                boxShadow: cardShadow,
+              }}
+            >
+              {pointMedia && (
+                <div
+                  // The feature image is capped rather than stretched: filling
+                  // the full column height over-crops a poster-shaped graphic.
+                  // The stacked pair does grow, which is what lets that column
+                  // match the feature's height with no dead space.
+                  className={`overflow-hidden ${
+                    featured
+                      ? "h-52 sm:h-64 lg:h-[340px]"
+                      : whyBento
+                        ? "h-40 sm:h-52 lg:h-auto lg:min-h-[130px] lg:flex-1"
+                        : "h-44 sm:h-56"
+                  }`}
+                >
+                  {pointMedia}
+                </div>
+              )}
+              <div className={`p-5 text-center sm:p-7 sm:text-left ${featured ? "" : tinted ? "lg:p-7" : "lg:p-6"}`}>
+                {/* RitualRule is an inline-flex atom, so it needs a flex parent
+                    to center; on its own it hugs the left edge. Only the tiles
+                    without a photo keep it. Repeating the same divider on every
+                    tile is what made this grid read as a template. */}
+                {(featured || tinted) && (
+                  <div className="mb-4 flex justify-center sm:justify-start">
+                    <RitualRule color={c.accent} />
+                  </div>
+                )}
+                <h3
+                  className={`font-display font-bold leading-snug ${featured ? "text-xl sm:text-3xl" : "text-lg sm:text-2xl lg:text-xl"}`}
+                  style={{ color: ink }}
+                >
+                  {point.title}
+                </h3>
+                <p
+                  className={`font-body mt-2 leading-relaxed sm:mt-3 ${featured ? "" : "text-sm sm:text-base"}`}
+                  style={{ color: muted }}
+                >
+                  {point.description}
+                </p>
+              </div>
+            </div>
+          );
+        };
+
         return (
         <section className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('why', c.bodyBg) }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading title={t.why.title} subtitle={t.why.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-9" />
-            <div className="grid gap-6 lg:gap-7 sm:grid-cols-2 lg:grid-cols-3">
-              {t.why.points.map((point, i) => {
-                const pointMedia = renderMedia(point.image, mediaKey("why", "points", i, "image"), {
-                  className: "w-full h-full object-cover",
-                  alt: point.title,
-                });
-                return (
-                <div
-                  key={i}
-                  className="lt-reveal lt-card lt-zoom group rounded-[26px] overflow-hidden"
-                  style={{
-                    ["--lt-i" as string]: i,
-                    backgroundColor: surface,
-                    border: `1px solid ${hairline}`,
-                    boxShadow: cardShadow,
-                  }}
-                >
-                  {pointMedia && <div className="h-44 overflow-hidden sm:h-56">{pointMedia}</div>}
-                  <div className="p-5 text-center sm:p-7 sm:text-left">
-                    {/* RitualRule is an inline-flex atom, so it needs a flex
-                        parent to center — on its own it hugs the left edge. */}
-                    <div className="mb-4 flex justify-center">
-                      <RitualRule color={c.accent} />
-                    </div>
-                    <h3 className="font-display text-xl sm:text-2xl font-bold leading-snug" style={{ color: ink }}>
-                      {point.title}
-                    </h3>
-                    <p className="font-body mt-3 leading-relaxed" style={{ color: muted }}>
-                      {point.description}
-                    </p>
+            <div className={`grid gap-4 sm:gap-6 lg:gap-7 ${whyBento ? "lg:grid-cols-5 lg:items-stretch" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
+              {whyBento ? (
+                <>
+                  {renderWhyCard(t.why.points[0], 0)}
+                  <div className="grid gap-4 sm:gap-6 lg:col-span-2 lg:flex lg:flex-col lg:gap-7">
+                    {t.why.points.slice(1).map((point, n) => renderWhyCard(point, n + 1))}
                   </div>
-                </div>
-              );})}
+                </>
+              ) : (
+                t.why.points.map((point, i) => renderWhyCard(point, i))
+              )}
             </div>
           </div>
         </section>
@@ -2746,7 +2929,11 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             <SectionHeading title={t.stats.title} subtitle={t.stats.subtitle} accent={c.accent} onDark className="mb-7" />
             {isTrustRail ? (
               <div
-                className="lt-reveal grid grid-cols-1 gap-6 rounded-[16px] p-6 md:grid-cols-3 md:p-10"
+                className={`lt-reveal grid grid-cols-1 gap-6 rounded-[16px] p-6 md:p-10 ${
+                  // A 4-item rail in a 3-column grid strands the last one on its
+                  // own row; 4-up (2-up on tablet) keeps every row full.
+                  t.stats.stats.length % 4 === 0 ? "sm:grid-cols-2 lg:grid-cols-4" : "md:grid-cols-3"
+                }`}
                 style={{ backgroundColor: "#FFFFFF", border: `2px solid ${hexToRgba(c.accent, 0.25)}` }}
               >
                 {t.stats.stats.map((stat, i) => (
@@ -2755,7 +2942,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                       <ProgramIcon name={stat.icon} className="h-6 w-6" style={{ color: "#fff" } as React.CSSProperties} />
                     </div>
                     <div>
-                      <div className="font-display text-lg font-bold leading-snug" style={{ color: "#111827" }}>{stat.value}</div>
+                      <CountUpValue value={stat.value} className="font-display block text-lg font-bold leading-snug tabular-nums" style={{ color: "#111827" }} />
                       <div className="font-body mt-0.5 text-sm leading-snug" style={{ color: "#4B5563" }}>{stat.label}</div>
                     </div>
                   </div>
@@ -2778,7 +2965,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                     border: "1px solid rgba(255,255,255,0.13)",
                   }}
                 >
-                  <div className="font-display text-2xl lg:text-3xl font-bold leading-tight text-white">{stat.value}</div>
+                  <CountUpValue value={stat.value} className="font-display block text-2xl font-bold leading-tight tabular-nums text-white lg:text-3xl" />
                   <div
                     className={
                       isSentence
@@ -3014,7 +3201,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       <section className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('program', hexToRgba(c.primary, 0.05)) }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <SectionHeading title={t.program.title} subtitle={t.program.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-9" />
-          <div className="grid gap-5 lg:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {/* 4 points in a 3-column grid leave the last card alone on row 2 —
+              a 2x2 grid reads as intentional. */}
+          <div className={`grid gap-5 lg:gap-6 sm:grid-cols-2 ${t.program.points.length === 4 ? "" : "lg:grid-cols-3"}`}>
             {t.program.points.map((point, i) => (
               <div
                 key={i}
@@ -3085,19 +3274,22 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         >
           <span className="lt-grain-layer" aria-hidden="true" />
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading title={t.bonus.title} accent={c.accent} onDark className="mb-6 lg:mb-9" />
+            <SectionHeading title={t.bonus.title} subtitle={t.bonus.subtitle} accent={c.accent} onDark className="mb-6 lg:mb-9" />
             <div className={`grid gap-4 sm:gap-6 lg:gap-8 mx-auto ${t.bonus.items.length >= 3 ? "sm:grid-cols-2 lg:grid-cols-3 max-w-6xl" : "sm:grid-cols-2 max-w-4xl"}`}>
               {t.bonus.items.map((item, i) => (
                 <div
                   key={i}
-                  className="lt-reveal lt-card lt-zoom group relative overflow-hidden rounded-[26px] p-6 text-center backdrop-blur-sm"
+                  // Cover-left row on phones, centred stack from sm. Centred,
+                  // each 220px cover made a card nearly a full screen tall and
+                  // the three bonuses cost three screens of scroll.
+                  className="lt-reveal lt-card lt-zoom group relative flex items-center gap-4 overflow-hidden rounded-[20px] p-4 text-left backdrop-blur-sm sm:block sm:rounded-[26px] sm:p-6 sm:text-center"
                   style={{
                     ["--lt-i" as string]: i,
                     backgroundColor: "rgba(255,255,255,0.06)",
                     border: "1px solid rgba(255,255,255,0.13)",
                   }}
                 >
-                  <div className="relative mx-auto w-full max-w-[220px]">
+                  <div className="relative w-[88px] flex-shrink-0 sm:mx-auto sm:w-full sm:max-w-[220px]">
                     <span
                       aria-hidden="true"
                       className="pointer-events-none absolute -inset-3 rounded-3xl blur-2xl opacity-70 transition-opacity duration-500 group-hover:opacity-100"
@@ -3120,10 +3312,12 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                       </div>
                     )}
                   </div>
-                  <h3 className="font-display mt-6 text-lg sm:text-xl font-bold leading-snug text-white">{item.title}</h3>
-                  {hasContent(item.description) && (
-                    <p className="font-body mt-2 text-sm leading-relaxed text-white/65">{item.description}</p>
-                  )}
+                  <div className="min-w-0 sm:mt-6">
+                    <h3 className="font-display text-[15px] font-bold leading-snug text-white sm:text-xl">{item.title}</h3>
+                    {hasContent(item.description) && (
+                      <p className="font-body mt-1.5 text-[13px] leading-relaxed text-white/65 sm:mt-2 sm:text-sm">{item.description}</p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -3549,7 +3743,10 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                       <div key={i} className="flex flex-col items-center gap-2 text-center sm:items-start sm:text-left">
                         <span
                           className="flex h-9 w-9 items-center justify-center rounded-xl"
-                          style={{ backgroundColor: hexToRgba(c.accent, 0.12) }}
+                          style={{
+                            backgroundImage: `linear-gradient(135deg, ${hexToRgba(c.primary, 0.16)} 0%, ${hexToRgba(c.accent, 0.22)} 100%)`,
+                            border: `1px solid ${hexToRgba(c.accent, 0.28)}`,
+                          }}
                         >
                           <ProgramIcon name={item.icon} className="h-4 w-4" style={{ color: c.accent } as React.CSSProperties} />
                         </span>
@@ -3660,7 +3857,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <SectionHeading title={pr.title} subtitle={pr.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-6" />
               {items.length > 0 && (
-                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+                <div className={`grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-5 ${items.length === 4 ? "" : "lg:grid-cols-3"}`}>
                   {items.map((item, i) => (
                     <div
                       key={i}
@@ -3669,12 +3866,15 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                       // Icon-left row at every width. Stacking and centring these
                       // on phones made each card roughly twice as tall for no
                       // gain — six of them dominated the scroll.
-                      className="lt-reveal lt-card flex items-start gap-3 rounded-[18px] p-4 text-left sm:gap-4 sm:rounded-[22px] sm:p-6"
+                      className="lt-reveal lt-card group flex items-start gap-3 rounded-[18px] p-4 text-left sm:gap-4 sm:rounded-[22px] sm:p-6"
                       style={{ ["--lt-i" as string]: i % 3, backgroundColor: surface, border: `1px solid ${hairline}`, boxShadow: cardShadow }}
                     >
                       <span
-                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 sm:rounded-2xl"
-                        style={{ backgroundColor: hexToRgba(c.accent, 0.12) }}
+                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl transition-transform duration-500 group-hover:scale-110 sm:h-11 sm:w-11 sm:rounded-2xl"
+                        style={{
+                          backgroundImage: `linear-gradient(135deg, ${hexToRgba(c.primary, 0.16)} 0%, ${hexToRgba(c.accent, 0.22)} 100%)`,
+                          border: `1px solid ${hexToRgba(c.accent, 0.28)}`,
+                        }}
                       >
                         <ProgramIcon name={item.icon} className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: c.accent } as React.CSSProperties} />
                       </span>
@@ -4235,7 +4435,14 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       // promotion entirely.
       ref={rootRef}
       className="min-h-screen font-sans w-full max-w-full overflow-hidden"
-      style={{ backgroundColor: c.bodyBg, ...(t.fontFamily ? { fontFamily: t.fontFamily } : {}) }}
+      style={{
+        backgroundColor: c.bodyBg,
+        // Consumed by the .lt-card seam so the crystalline top edge stays in
+        // each page's own palette instead of a hardcoded brand color.
+        ["--lt-seam" as string]: c.accent,
+        ["--lt-seam-soft" as string]: hexToRgba(c.primary, 0.55),
+        ...(t.fontFamily ? { fontFamily: t.fontFamily } : {}),
+      }}
     >
       {/* Inject marquee animation + fonts. A chosen template font overrides the
           default body (and heading) fonts across the whole page. */}
@@ -4289,6 +4496,23 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           animation: lt-seat-shimmer 2.6s ease-in-out 1.1s infinite;
         }
         .lt-seat-ping { animation: lt-seat-ping 1.9s cubic-bezier(0,0,.2,1) infinite; }
+
+        /* Seconds chip in the docked-bar countdown — a 1s pulse so the strip
+           reads as live rather than as a static date. */
+        @keyframes lt-tick { 0%, 82% { transform: none; } 88% { transform: scale(1.08); } 100% { transform: none; } }
+        .lt-tick { animation: lt-tick 1s ease-in-out infinite; }
+
+        /* Docked-bar CTA. Everything here is unattended — there is no hover on
+           the device this bar exists for. The pulse lives on the wrapper so the
+           button's own :hover translate still works on desktop. */
+        @keyframes lt-dock-glow { 0%, 100% { opacity: .4; transform: scale(.95); } 50% { opacity: .85; transform: scale(1.05); } }
+        @keyframes lt-dock-pulse { 0%, 86%, 100% { transform: none; } 93% { transform: scale(1.035); } }
+        @keyframes lt-dock-sheen { 0% { transform: translateX(-130%) skewX(-18deg); } 22%, 100% { transform: translateX(320%) skewX(-18deg); } }
+        @keyframes lt-dock-arrow { 0%, 80%, 100% { transform: none; } 90% { transform: translateX(3px); } }
+        .lt-dock-glow { animation: lt-dock-glow 2.6s ease-in-out infinite; }
+        .lt-dock-cta { animation: lt-dock-pulse 3.4s ease-in-out infinite; }
+        .lt-dock-cta .lt-cta-sheen { animation: lt-dock-sheen 3.4s ease-out infinite; }
+        .lt-dock-arrow { animation: lt-dock-arrow 3.4s ease-in-out infinite; }
         .lt-anim .lt-reveal .lt-seat-fill { width: 0 !important; }
         .lt-anim .lt-reveal.is-in .lt-seat-fill {
           width: var(--lt-seat, 0%) !important;
@@ -4329,7 +4553,20 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='.55'/></svg>");
         }
 
-        .lt-card { transition: transform .5s cubic-bezier(.16,1,.3,1), box-shadow .5s ease, border-color .5s ease; }
+        /* The seam: a crystalline hairline along a card's top edge that widens
+           to the full width on hover. It is the one ornament the light half of
+           the page carries — salt is the subject, and a struck line of mineral
+           light is the closest the type system gets to it. Inset by default so
+           it reads as a facet rather than a border. */
+        .lt-card { position: relative; transition: transform .5s cubic-bezier(.16,1,.3,1), box-shadow .5s ease, border-color .5s ease; }
+        .lt-card::before {
+          content: ""; position: absolute; left: 18%; right: 18%; top: -1px; height: 1.5px;
+          pointer-events: none; border-radius: 9999px;
+          background: linear-gradient(90deg, transparent, var(--lt-seam-soft), var(--lt-seam), var(--lt-seam-soft), transparent);
+          opacity: .5;
+          transition: opacity .55s ease, left .55s cubic-bezier(.16,1,.3,1), right .55s cubic-bezier(.16,1,.3,1);
+        }
+        .lt-card:hover::before { left: 6%; right: 6%; opacity: 1; }
         .lt-card:hover { transform: translateY(-6px); }
 
         .lt-cta { overflow: hidden; isolation: isolate; transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s ease; }
@@ -4351,7 +4588,8 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           .lt-anim .lt-rise { animation: none !important; }
           .lt-aura, .animate-marquee, .lt-marquee-track, .animate-bounce { animation: none !important; }
           .lt-proof-pop { animation: none !important; }
-          .lt-seat-shimmer, .lt-seat-ping { animation: none !important; }
+          .lt-seat-shimmer, .lt-seat-ping, .lt-tick { animation: none !important; }
+          .lt-dock-glow, .lt-dock-cta, .lt-dock-cta .lt-cta-sheen, .lt-dock-arrow { animation: none !important; }
           .lt-anim .lt-reveal .lt-seat-fill,
           .lt-anim .lt-reveal.is-in .lt-seat-fill { width: var(--lt-seat, 0%) !important; transition: none !important; }
           .lt-card:hover, .lt-cta:hover { transform: none !important; }
@@ -4421,9 +4659,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       )}
 
       {floatingButtonProps && (isCheckoutBar ? (
-        // Docked checkout bar: price + note on the left, button on the right —
-        // the pattern every reference landing page uses on mobile. Sits above
-        // the home-indicator via env(safe-area-inset-bottom).
+        // Docked checkout bar: countdown / price / note on the left, button on
+        // the right — the pattern every reference landing page uses on mobile.
+        // Sits above the home-indicator via env(safe-area-inset-bottom).
         <div
           className={`fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur-md ${floatingOnDesktop ? "" : "md:hidden"}`}
           style={{
@@ -4434,8 +4672,17 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           }}
         >
           <div className="mx-auto flex max-w-3xl items-center gap-3 px-3 py-2.5 sm:gap-5 sm:px-6 sm:py-3">
-            {(hasContent(t.floatingButton.priceText) || hasContent(t.floatingButton.noteText)) && (
+            {(hasContent(t.floatingButton.countdownTo) ||
+              hasContent(t.floatingButton.priceText) ||
+              hasContent(t.floatingButton.noteText)) && (
               <div className="min-w-0 flex-1">
+                {hasContent(t.floatingButton.countdownTo) && (
+                  <DockedCountdown
+                    target={t.floatingButton.countdownTo}
+                    label={t.floatingButton.countdownLabel}
+                    accent={c.accent}
+                  />
+                )}
                 {hasContent(t.floatingButton.priceText) && (
                   <span className="flex flex-wrap items-baseline gap-1.5">
                     <span className="font-display text-lg font-bold leading-none text-white sm:text-xl">
@@ -4455,26 +4702,38 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 )}
               </div>
             )}
-            {"href" in floatingButtonProps ? (
-              <a
-                href={floatingButtonProps.href}
-                className="lt-cta lt-focus group/cta relative inline-flex h-12 flex-shrink-0 items-center justify-center rounded-full px-5 text-sm font-semibold text-white shadow-lg sm:px-8 sm:text-base"
-                style={ctaStyle(c.primary, c.accent)}
-              >
-                <span className="lt-cta-sheen" aria-hidden="true" />
-                {floatingButtonProps.label}
-              </a>
-            ) : (
-              <button
-                type="button"
-                onClick={floatingButtonProps.action}
-                className="lt-cta lt-focus group/cta relative inline-flex h-12 flex-shrink-0 items-center justify-center rounded-full px-5 text-sm font-semibold text-white shadow-lg sm:px-8 sm:text-base"
-                style={ctaStyle(c.primary, c.accent)}
-              >
-                <span className="lt-cta-sheen" aria-hidden="true" />
-                {floatingButtonProps.label}
-              </button>
-            )}
+            {/* The pill's own effects are hover-driven, which never fires on a
+                phone — so the docked CTA gets a breathing aura, an unattended
+                sheen sweep and a slow pulse from the wrapper. */}
+            <span className="lt-dock-cta relative flex-shrink-0">
+              <span
+                aria-hidden="true"
+                className="lt-dock-glow pointer-events-none absolute -inset-1.5 rounded-full blur-md"
+                style={{ background: `linear-gradient(90deg, ${hexToRgba(c.primary, 0.85)}, ${hexToRgba(c.accent, 0.95)})` }}
+              />
+              {"href" in floatingButtonProps ? (
+                <a
+                  href={floatingButtonProps.href}
+                  className="lt-cta lt-focus group/cta relative inline-flex h-12 items-center justify-center rounded-full px-5 text-sm font-semibold text-white shadow-lg sm:px-8 sm:text-base"
+                  style={ctaStyle(c.primary, c.accent)}
+                >
+                  <span className="lt-cta-sheen" aria-hidden="true" />
+                  {floatingCtaLabel}
+                  <CtaArrow className="lt-dock-arrow" />
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={floatingButtonProps.action}
+                  className="lt-cta lt-focus group/cta relative inline-flex h-12 items-center justify-center rounded-full px-5 text-sm font-semibold text-white shadow-lg sm:px-8 sm:text-base"
+                  style={ctaStyle(c.primary, c.accent)}
+                >
+                  <span className="lt-cta-sheen" aria-hidden="true" />
+                  {floatingCtaLabel}
+                  <CtaArrow className="lt-dock-arrow" />
+                </button>
+              )}
+            </span>
           </div>
         </div>
       ) : (
@@ -4492,7 +4751,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 className="relative inline-flex w-full h-14 items-center justify-center rounded-full text-base font-semibold text-white shadow-2xl"
                 style={{ backgroundColor: c.primary, animation: "floating-cta-bob 3.2s ease-in-out infinite" }}
               >
-                {floatingButtonProps.label}
+                {floatingCtaLabel}
               </a>
             ) : (
               <button
@@ -4501,7 +4760,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 className="relative inline-flex w-full h-14 items-center justify-center rounded-full text-base font-semibold text-white shadow-2xl"
                 style={{ backgroundColor: c.primary, animation: "floating-cta-bob 3.2s ease-in-out infinite" }}
               >
-                {floatingButtonProps.label}
+                {floatingCtaLabel}
               </button>
             )}
           </div>

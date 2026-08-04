@@ -39,6 +39,12 @@ const IMAGES = [
   { url: "https://adhyatmiksutraa.com/wp-content/uploads/2025/10/White-and-Brown-Simple-Cover-Book-Mockup-Instagram-Post-2.png", name: "salt-magic-bonus-subconscious-mind.png" },
   { url: "https://adhyatmiksutraa.com/wp-content/uploads/2025/10/White-and-Brown-Simple-Cover-Book-Mockup-Instagram-Post.png", name: "salt-magic-bonus-crystals-guide.png" },
   { url: "https://adhyatmiksutraa.com/wp-content/uploads/2026/03/WhatsApp-Image-2026-02-07-at-14.53.37-1.jpeg", name: "salt-magic-coach-aparna-singh.jpeg" },
+  { url: "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/portrait-of-young-new-workers-facing-serious-at-ca-2022-05-08-22-15-18-utc-1.png", name: "salt-magic-testimonial-bhanu-arora.png" },
+  { url: "https://adhyatmiksutraa.com/wp-content/uploads/2025/10/23.jpg", name: "salt-magic-testimonial-priya-sharma.jpg" },
+  { url: "https://adhyatmiksutraa.com/wp-content/uploads/2025/09/young-caucasian-businessman-looking-camera-serious-2022-03-16-00-23-07-utc-1.png", name: "salt-magic-testimonial-manish-joshi.png" },
+  // Poster frame of the page's own webinar video (youtu.be/CE77pav0S0o) — the
+  // only other salt photo available; the WP hero image is actually a candle.
+  { url: "https://img.youtube.com/vi/CE77pav0S0o/sddefault.jpg", name: "salt-magic-webinar-poster.jpg" },
 ];
 
 function contentTypeFor(name) {
@@ -48,8 +54,17 @@ function contentTypeFor(name) {
 }
 
 async function main() {
-  const map = {};
+  const outPath = path.join(__dirname, "salt-magic-image-map.json");
+  // Re-uploading an already-mirrored file would mint a fresh uuid key and
+  // orphan the old object (which live pages still point at), so keep whatever
+  // the map already knows and only fetch what's new.
+  const map = fs.existsSync(outPath) ? JSON.parse(fs.readFileSync(outPath, "utf8")) : {};
+
   for (const img of IMAGES) {
+    if (map[img.url]) {
+      console.log(`Skipping ${img.url} (already mirrored)`);
+      continue;
+    }
     process.stdout.write(`Fetching ${img.url} ... `);
     const res = await fetch(img.url, {
       headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36" },
@@ -75,7 +90,6 @@ async function main() {
     console.log(`-> ${url}`);
   }
 
-  const outPath = path.join(__dirname, "salt-magic-image-map.json");
   fs.writeFileSync(outPath, JSON.stringify(map, null, 2));
   console.log(`\nWrote ${outPath}`);
 }

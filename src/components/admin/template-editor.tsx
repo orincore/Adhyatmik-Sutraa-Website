@@ -1201,6 +1201,30 @@ export function TemplateEditor({
                   className="h-8 text-xs bg-gray-50 border-gray-200"
                   placeholder="Only 23 seats left · closes Sunday"
                 />
+                <div>
+                  <Label className="text-xs text-gray-500">Countdown to (ISO)</Label>
+                  <Input
+                    value={data.floatingButton.countdownTo ?? ''}
+                    onChange={(e) => update("floatingButton", { countdownTo: e.target.value })}
+                    className="h-8 text-xs mt-1 bg-gray-50 border-gray-200"
+                    placeholder="2026-08-07T19:00:00+05:30"
+                  />
+                </div>
+                <Input
+                  value={data.floatingButton.countdownLabel ?? ''}
+                  onChange={(e) => update("floatingButton", { countdownLabel: e.target.value })}
+                  className="h-8 text-xs bg-gray-50 border-gray-200"
+                  placeholder="Countdown label — e.g. Starts in"
+                />
+                <div>
+                  <Label className="text-xs text-gray-500">Short button label (bar only)</Label>
+                  <Input
+                    value={data.floatingButton.ctaTextOverride ?? ''}
+                    onChange={(e) => update("floatingButton", { ctaTextOverride: e.target.value })}
+                    className="h-8 text-xs mt-1 bg-gray-50 border-gray-200"
+                    placeholder="Register Now"
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -2736,6 +2760,10 @@ export function TemplateEditor({
         <div>
           <Label className="text-xs text-gray-500">Title</Label>
           <Input value={data.bonus.title} onChange={(e) => update("bonus", { title: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Subtitle</Label>
+          <Input value={data.bonus.subtitle || ""} onChange={(e) => update("bonus", { subtitle: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
         </div>
         {data.bonus.items.map((item, i) => {
           const bonusKey = mediaKey("bonus", "items", i, "image");

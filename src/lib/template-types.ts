@@ -301,6 +301,7 @@ export interface BonusItem {
 
 export interface BonusSection {
   title: string;
+  subtitle?: string;
   items: BonusItem[];
   enabled: boolean;
 }
@@ -419,6 +420,12 @@ export interface FloatingButtonSettings {
   priceText?: string;
   strikePriceText?: string;
   noteText?: string;
+  // A docked bar has far less room than an in-page CTA, so it can carry its own
+  // shorter label without changing the source section's button text.
+  ctaTextOverride?: string;
+  // "bar" variant only — live countdown shown on the left of the strip.
+  countdownTo?: string;      // ISO datetime
+  countdownLabel?: string;
   showOnDesktop?: boolean;   // default false — mobile-only, as before
 }
 
@@ -927,6 +934,7 @@ export const DEFAULT_TEMPLATE_DATA: LandingTemplateData = {
   },
   bonus: {
     title: "Exclusive Bonuses",
+    subtitle: "",
     items: [
       { title: "Guided Meditation Pack", description: "10 custom meditations for frequency alignment", image: "" },
       { title: "Private Community Access", description: "Lifetime access to our private support group", image: "" },
