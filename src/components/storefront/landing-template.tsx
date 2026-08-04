@@ -3616,17 +3616,6 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
               </div>
             </div>
           </div>
-
-          <InvitationDialog
-            open={invitationDialogOpen}
-            onOpenChange={setInvitationDialogOpen}
-            invitation={t.invitation}
-            primaryColor={c.primary}
-            accentColor={c.accent}
-            landingPageId={landingPageId}
-            pageSlug={pageSlug}
-            isPreviewMode={isPreviewMode}
-          />
         </section>
       );
 
@@ -4832,6 +4821,25 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       {editorBridge && (
         <SectionInsertPoint index={sectionOrder.length} bridge={editorBridge} />
       )}
+
+      {/* Mounted once at the page level, not inside the 'invitation' case's
+          section — every "Register Now" CTA across the template (hero,
+          announcement bar, program, pricing, footer, ...) opens this same
+          dialog via setInvitationDialogOpen, regardless of whether the
+          'invitation' section itself is enabled or even in sectionOrder for
+          this page. Nesting it inside that one case meant the dialog simply
+          didn't exist in the tree — and every other Register button — on any
+          page that didn't use the invitation section. */}
+      <InvitationDialog
+        open={invitationDialogOpen}
+        onOpenChange={setInvitationDialogOpen}
+        invitation={t.invitation}
+        primaryColor={c.primary}
+        accentColor={c.accent}
+        landingPageId={landingPageId}
+        pageSlug={pageSlug}
+        isPreviewMode={isPreviewMode}
+      />
 
       {/* Reserves the strip the docked CTA occupies so it can never cover the
           last rows of the footer on a phone. */}
