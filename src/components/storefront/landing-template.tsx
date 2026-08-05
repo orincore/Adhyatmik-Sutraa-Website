@@ -4626,10 +4626,16 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       // sections/blocks feel individually scrollable instead of one
       // continuous page. The marquee ticker already clips itself locally
       // (see the Marquee component below), so this wrapper doesn't need
-      // vertical overflow visible — overflow-hidden on both axes avoids the
-      // promotion entirely.
+      // vertical overflow visible — clip on both axes avoids the promotion
+      // entirely. `clip`, not `hidden`: `overflow: hidden` establishes a
+      // scroll container, which broke the announcementBar's `position:
+      // sticky` (it stuck relative to this div instead of the viewport, so
+      // it never visibly stayed put while scrolling). `clip` still clips
+      // overflow but — unlike hidden/auto/scroll — doesn't create a
+      // scrolling context, so sticky descendants look past it to the real
+      // viewport as their scrolling ancestor.
       ref={rootRef}
-      className="min-h-screen font-sans w-full max-w-full overflow-hidden"
+      className="min-h-screen font-sans w-full max-w-full overflow-clip"
       style={{
         backgroundColor: c.bodyBg,
         // Consumed by the .lt-card seam so the crystalline top edge stays in
