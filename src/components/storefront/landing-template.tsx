@@ -3659,6 +3659,18 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                   />
                 </div>
               );
+            } else if (block.imageFit === "natural") {
+              // No fixed well at all — the image sets its own height at the
+              // column's width, so a self-contained poster/banner (copy
+              // baked into the artwork) shows completely uncropped with no
+              // letterboxing either. Only opt-in per block (see imageFit's
+              // definition in template-types.ts) since this can make blocks
+              // in this section vary in height, unlike the fixed-well default.
+              return (
+                <div className="w-full overflow-hidden rounded-xl shadow-lg">
+                  {renderMedia(block.mediaUrl, blockKey, { className: "w-full h-auto block" })}
+                </div>
+              );
             } else {
               // image — same aspect-video well as its video/YouTube siblings
               // above, so blocks in this section don't jump around in height.
