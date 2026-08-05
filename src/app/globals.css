@@ -69,6 +69,22 @@
       radial-gradient(ellipse 60% 50% at 85% 100%, rgba(123, 63, 122, 0.05) 0%, transparent 55%),
       #fbf7f9;
     font-family: 'Open Sans', sans-serif;
+    /* Next.js's own SSR output leaves whitespace text nodes as the last
+       children of <body> (between its injected hydration <script> tags),
+       which per spec should collapse to nothing — but in practice still
+       generates one line box at body's own line-height, showing up as a
+       ~24px blank strip below every page's real content, after the last
+       visible element. Zeroing body's own type size collapses that phantom
+       line to 0; the direct wrapper div around all real page content (every
+       page's storefront/landing-template/dynamic-page-renderer root) restores
+       normal sizing immediately, so this has no visible effect on any
+       rendered text — only on whitespace that belongs to no element. */
+    font-size: 0;
+    line-height: 0;
+  }
+  body > div {
+    font-size: 1rem;
+    line-height: 1.5rem;
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Marcellus', serif;
