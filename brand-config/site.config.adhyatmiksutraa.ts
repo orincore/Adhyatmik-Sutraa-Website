@@ -48,7 +48,8 @@ export const adhyatmiksutraa: SiteConfig = {
     youtube: "https://www.youtube.com/@adhyatmiksutraabysonali",
   },
   analytics: {
-    // No GTM/Trustpilot found on the source site — leave unset until the client provides IDs.
+    gtmId: "GTM-W775PSWN",
+    // No Trustpilot ID found on the source site — leave unset until the client provides one.
   },
   razorpayDisplayName: "Adhyatmik Sutraa",
   email: {

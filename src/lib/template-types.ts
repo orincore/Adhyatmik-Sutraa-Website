@@ -47,7 +47,7 @@ export interface MarqueeSection {
 export interface WhySection {
   title: string;                 // e.g. "Why Effort Isn't Working Anymore"
   subtitle: string;
-  points: { title: string; description: string; image: string }[];
+  points: { title: string; description: string; image: string; imageFit?: "contain" | "cover" }[];
   layoutVariant?: "cards" | "splitAlternating"; // "cards" (default) = current 3-card grid; "splitAlternating" = image grid + heading
   imageSide?: "left" | "right"; // only used by "splitAlternating" — which side the image grid sits on (default "left")
   visible: boolean;
@@ -314,6 +314,8 @@ export interface ContentBlockSection {
   textFormat: "plain" | "bullets";
   heading?: string;
   content: string; // Plain text or bullet points (one per line)
+  /** Image-only. Default "contain" preserves poster/baked-text artwork uncropped; "cover" fills the frame instead (crops as needed). */
+  imageFit?: "contain" | "cover";
 }
 
 // A free-floating rich-content zone that can sit anywhere in `sectionOrder`

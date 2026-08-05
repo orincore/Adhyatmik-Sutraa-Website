@@ -2809,13 +2809,15 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           // cell with no image becomes an accent-washed type tile, which gives
           // the grid real material variation without inventing content to fill.
           const tinted = whyBento && !featured && !hasContent(point.image);
-          // object-contain, not cover. These are brand posters with the
-          // headline baked into the artwork, and a square poster in a wide
-          // bento box was losing half of itself to the crop. Contained on a
-          // tinted plinth nothing is lost, and it reads as a deliberate
-          // product shot rather than a botched crop.
+          // Default is object-contain: these are usually brand posters with
+          // the headline baked into the artwork, and a square poster in a
+          // wide bento box was losing half of itself to the crop. Contained
+          // on a tinted plinth nothing is lost, and it reads as a deliberate
+          // product shot rather than a botched crop. Per-point imageFit:
+          // "cover" opts a specific point out of that when the page author
+          // wants the frame filled instead (accepting the crop).
           const pointMedia = renderMedia(point.image, mediaKey("why", "points", i, "image"), {
-            className: "w-full h-full object-contain",
+            className: `w-full h-full ${point.imageFit === "cover" ? "object-cover" : "object-contain"}`,
             alt: point.title,
           });
           return (
@@ -3660,17 +3662,19 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             } else {
               // image — same aspect-video well as its video/YouTube siblings
               // above, so blocks in this section don't jump around in height.
-              // object-contain, not cover: these blocks are used for both
-              // photos and brand posters with copy baked into the artwork,
-              // and cover was cropping poster text off (see the 'why'
-              // section's identical fix for the same failure mode).
+              // Default object-contain, not cover: these blocks are used for
+              // both photos and brand posters with copy baked into the
+              // artwork, and cover was cropping poster text off (see the
+              // 'why' section's identical fix for the same failure mode).
+              // Per-block imageFit: "cover" opts a specific block out of that
+              // when the page author wants the frame filled instead.
               return (
                 <div
                   className="relative w-full aspect-video overflow-hidden rounded-xl shadow-lg"
                   style={{ backgroundColor: hexToRgba(c.primary, 0.06) }}
                 >
                   {renderMedia(block.mediaUrl, blockKey, {
-                    className: "absolute inset-0 w-full h-full object-contain",
+                    className: `absolute inset-0 w-full h-full ${block.imageFit === "cover" ? "object-cover" : "object-contain"}`,
                   })}
                 </div>
               );
