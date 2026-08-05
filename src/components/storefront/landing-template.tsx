@@ -2815,9 +2815,11 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           // on a tinted plinth nothing is lost, and it reads as a deliberate
           // product shot rather than a botched crop. Per-point imageFit:
           // "cover" opts a specific point out of that when the page author
-          // wants the frame filled instead (accepting the crop).
+          // wants the frame filled instead (accepting the crop); "natural"
+          // (see below) skips the fixed well entirely.
+          const natural = point.imageFit === "natural";
           const pointMedia = renderMedia(point.image, mediaKey("why", "points", i, "image"), {
-            className: `w-full h-full ${point.imageFit === "cover" ? "object-cover" : "object-contain"}`,
+            className: natural ? "w-full h-auto block" : `w-full h-full ${point.imageFit === "cover" ? "object-cover" : "object-contain"}`,
             alt: point.title,
           });
           return (
@@ -2842,8 +2844,11 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 <div
                   // Boxes are sized so a contained image still fills most of
                   // them: the feature gets a near-square well (its posters are
-                  // 1:1), the stacked pair a 3:2 well.
-                  className={`overflow-hidden ${
+                  // 1:1), the stacked pair a 3:2 well. "natural" (opt-in per
+                  // point) skips this fixed well entirely — the card's height
+                  // follows the image's own aspect ratio instead, for a
+                  // point whose photo doesn't match either preset ratio.
+                  className={natural ? "overflow-hidden" : `overflow-hidden ${
                     featured
                       ? "aspect-[4/3] sm:aspect-[16/11] lg:aspect-[7/5]"
                       : whyBento
@@ -2851,7 +2856,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                         : "h-44 sm:h-56"
                   }`}
                   style={
-                    whyBento
+                    whyBento && !natural
                       ? { backgroundColor: hexToRgba(c.primary, 0.06) }
                       : undefined
                   }
