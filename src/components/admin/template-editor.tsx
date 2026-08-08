@@ -1202,12 +1202,12 @@ export function TemplateEditor({
                   placeholder="Only 23 seats left · closes Sunday"
                 />
                 <div>
-                  <Label className="text-xs text-gray-500">Countdown to (ISO)</Label>
+                  <Label className="text-xs text-gray-500">Countdown ends at</Label>
                   <Input
-                    value={data.floatingButton.countdownTo ?? ''}
-                    onChange={(e) => update("floatingButton", { countdownTo: e.target.value })}
+                    type="datetime-local"
+                    value={toDatetimeLocal(data.floatingButton.countdownTo)}
+                    onChange={(e) => update("floatingButton", { countdownTo: fromDatetimeLocal(e.target.value) })}
                     className="h-8 text-xs mt-1 bg-gray-50 border-gray-200"
-                    placeholder="2026-08-07T19:00:00+05:30"
                   />
                 </div>
                 <Input
