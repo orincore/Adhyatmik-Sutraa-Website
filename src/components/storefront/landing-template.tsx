@@ -14,6 +14,7 @@ import {
   getSectionLabel,
   isRichBlockKey,
   richBlockId,
+  sectionGradientCss,
 } from "@/lib/template-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -123,6 +124,7 @@ function SectionHeading({
   accent,
   align = "center",
   className = "",
+  headingColor,
 }: {
   title?: string;
   subtitle?: string;
@@ -130,6 +132,9 @@ function SectionHeading({
   accent: string;
   align?: "center" | "left";
   className?: string;
+  // Per-section override (Template tab → Section Style → Heading color).
+  // Falls back to the usual onDark/light default when unset.
+  headingColor?: string;
 }) {
   const centered = align === "center";
   return (
@@ -140,14 +145,14 @@ function SectionHeading({
       {hasContent(title) && (
         <h2
           className="lt-reveal font-display font-bold leading-[1.08] tracking-[-0.02em] text-[clamp(1.6rem,4vw,3.25rem)]"
-          style={{ ["--lt-i" as string]: 1, color: onDark ? "#fff" : "#111827" }}
+          style={{ ["--lt-i" as string]: 1, color: headingColor || (onDark ? "#fff" : "#111827") }}
         >
           {title}
         </h2>
       )}
       {hasContent(subtitle) && (
         <p
-          className="lt-reveal font-body mt-4 text-base sm:text-lg leading-relaxed"
+          className="lt-reveal font-body mt-4 text-base sm:text-lg leading-relaxed whitespace-pre-line"
           style={{ ["--lt-i" as string]: 2, color: onDark ? "#ffffff" : "#4B5563" }}
         >
           {subtitle}
@@ -590,7 +595,7 @@ function CurriculumRow({
         <div className="overflow-hidden">
           <div className="px-4 pb-5 pl-[3.25rem] sm:px-6 sm:pl-[4.75rem]">
             {hasContent(module.description) && (
-              <p className="font-body mb-3 text-sm leading-relaxed" style={{ color: muted }}>
+              <p className="font-body mb-3 text-sm leading-relaxed whitespace-pre-line" style={{ color: muted }}>
                 {module.description}
               </p>
             )}
@@ -1018,6 +1023,10 @@ export interface TemplateEditorBridge {
   onInsertRichBlockWithElement: (elementType: string, gapIndex: number) => void;
   // Full delete (not hide) — only dynamic rich blocks get this.
   onRemoveRichBlock: (key: string) => void;
+  // Full delete (not hide) for a canonical/fixed template section — pulls it
+  // out of sectionOrder and records it in deletedSections so it stays gone
+  // until explicitly restored via insertableBlocks.
+  onDeleteSection?: (key: string) => void;
 }
 
 interface LandingTemplateProps {
@@ -1218,6 +1227,10 @@ function EditorSectionShell({
   const isRichContent = sectionKey === "richContent" || isDynamicRichBlock;
   const canToggle = sectionKey !== "richContent";
   const canDuplicate = !!bridge.onDuplicateSection && sectionKey === "contentBlocks";
+  // Full delete for a fixed/canonical section — everything except the legacy
+  // singleton richContent slot (always present) and dynamic rich blocks
+  // (which already get their own delete via onRemoveRichBlock above).
+  const canDelete = !!bridge.onDeleteSection && sectionKey !== "richContent" && !isDynamicRichBlock;
 
   // Close the section menu on Escape / resize. It deliberately does NOT close
   // on scroll — the menu is position:fixed, so it stays put while the canvas
@@ -1416,6 +1429,21 @@ function EditorSectionShell({
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           )}
+          {canDelete && (
+            <button
+              type="button"
+              title="Delete section"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm(`Delete the "${label}" section? You can add it back later from the "+" insert menu.`)) {
+                  bridge.onDeleteSection!(sectionKey);
+                }
+              }}
+              className="h-6 w-6 flex items-center justify-center rounded-md hover:bg-white/15"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
       )}
@@ -1426,18 +1454,34 @@ function EditorSectionShell({
           <span className="text-xs font-medium text-gray-400 flex items-center gap-2">
             <EyeOff className="h-3.5 w-3.5" /> {label} (hidden)
           </span>
-          {canToggle && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                bridge.onToggleVisibility(sectionKey);
-              }}
-              className="text-[11px] font-semibold text-violet-600 hover:text-violet-800"
-            >
-              Show
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {canToggle && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  bridge.onToggleVisibility(sectionKey);
+                }}
+                className="text-[11px] font-semibold text-violet-600 hover:text-violet-800"
+              >
+                Show
+              </button>
+            )}
+            {canDelete && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm(`Delete the "${label}" section? You can add it back later from the "+" insert menu.`)) {
+                    bridge.onDeleteSection!(sectionKey);
+                  }
+                }}
+                className="text-[11px] font-semibold text-red-500 hover:text-red-700"
+              >
+                Delete
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -1515,6 +1559,23 @@ function EditorSectionShell({
                     label="Delete this block"
                     danger
                     onClick={() => runCtx(() => bridge.onRemoveRichBlock(sectionKey))}
+                  />
+                </>
+              )}
+              {canDelete && (
+                <>
+                  <div className="my-1 h-px bg-gray-100" />
+                  <SectionMenuItem
+                    icon={<Trash2 />}
+                    label="Delete section"
+                    danger
+                    onClick={() =>
+                      runCtx(() => {
+                        if (window.confirm(`Delete the "${label}" section? You can add it back later from the "+" insert menu.`)) {
+                          bridge.onDeleteSection!(sectionKey);
+                        }
+                      })
+                    }
                   />
                 </>
               )}
@@ -2044,7 +2105,7 @@ function InvitationDialog({
           <div ref={scrollAreaRef} onFocusCapture={handleFieldFocus} className="flex-1 min-h-0 p-6 pb-24 sm:p-8 sm:pb-8 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
             <DialogHeader>
               <DialogTitle className="font-display text-xl sm:text-2xl text-violet-900">{invitation.formTitle}</DialogTitle>
-              <DialogDescription className="text-gray-500 text-xs sm:text-sm">
+              <DialogDescription className="text-gray-500 text-xs sm:text-sm whitespace-pre-line">
                 {invitation.subtitle}
               </DialogDescription>
             </DialogHeader>
@@ -2234,7 +2295,50 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
   const c = t.colors;
   // Returns override bg color for a section, or falls back to the provided default
   const sbg = (key: string, fallback: string) => (t.sectionBg?.[key]) || fallback;
-  const sectionOrder = resolveSectionOrder(t.sectionOrder);
+  // Per-section heading/button color overrides (Template tab → Section Style).
+  // `sCta` returns the ctaStyle() result for that section's buttons plus an
+  // optional text-color override, honoring a section's own
+  // buttonColor/buttonTextColor before falling back to the page's global
+  // primary/accent gradient.
+  const sCta = (key: string): React.CSSProperties => {
+    const s = t.sectionStyles?.[key];
+    const base = s?.buttonColor ? ctaStyle(s.buttonColor, s.buttonColor) : ctaStyle(c.primary, c.accent);
+    return s?.buttonTextColor ? { ...base, color: s.buttonTextColor } : base;
+  };
+  // Per-section background: when the editor opted a section into "gradient"
+  // mode (Template tab → Section Style), this fully replaces the section's
+  // usual background — including the default "stage"/"deepStage" aura
+  // backdrop or any other hardcoded gradient — with the author's own
+  // type/stops/angle. Everything else (a plain sectionBg solid override, or
+  // no override at all) renders exactly as before. `sBgClass` supplies the
+  // animation keyframe class (see the `lt-grad-*` rules below) and
+  // `sBgAnimStyle` its user-configured duration; both are no-ops outside
+  // gradient mode so every call site can always spread them.
+  const sBgStyle = (key: string, fallback: React.CSSProperties): React.CSSProperties => {
+    const style = t.sectionStyles?.[key];
+    if (style?.bgMode === "gradient" && style.bgGradient) {
+      return {
+        backgroundImage: sectionGradientCss(style.bgGradient),
+        backgroundColor: style.bgGradient.stops[0]?.color,
+      };
+    }
+    const solid = t.sectionBg?.[key];
+    if (solid) return { backgroundColor: solid };
+    return fallback;
+  };
+  const sBgGradient = (key: string) => {
+    const style = t.sectionStyles?.[key];
+    return style?.bgMode === "gradient" ? style.bgGradient : undefined;
+  };
+  const sBgClass = (key: string): string => {
+    const g = sBgGradient(key);
+    return g && g.animation !== "none" ? ` lt-grad-${g.animation}` : "";
+  };
+  const sBgAnimStyle = (key: string): React.CSSProperties => {
+    const g = sBgGradient(key);
+    return g && g.animation !== "none" ? { animationDuration: `${g.animationDuration}s` } : {};
+  };
+  const sectionOrder = resolveSectionOrder(t.sectionOrder, t.deletedSections);
   const mediaSettings = t.mediaSettings || {};
   // The invitation form lives in its own component (InvitationDialog) below so
   // that typing in it does NOT re-render the whole landing page (which caused
@@ -2605,12 +2709,12 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
     switch (sectionKey) {
       case 'hero': {
         if (!t.hero.visible) return null;
-        const heroBg = t.sectionBg?.['hero'] ? { backgroundColor: t.sectionBg['hero'] } : stage;
+        const heroBg = { ...sBgStyle('hero', stage), ...sBgAnimStyle('hero') };
 
         if (t.hero.layout === "fullBleed") {
           return (
             <section
-              className="relative flex min-h-[100svh] flex-col overflow-hidden px-4 pt-14 sm:px-6 sm:pt-20 lg:px-8"
+              className={`relative flex min-h-[100svh] flex-col overflow-hidden px-4 pt-14 sm:px-6 sm:pt-20 lg:px-8${sBgClass('hero')}`}
               style={heroBg}
             >
               <span className="lt-grain-layer" aria-hidden="true" />
@@ -2631,7 +2735,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 )}
                 <h1
                   className="lt-rise font-display font-bold text-white text-[clamp(2rem,5.4vw,3.6rem)] leading-[1.06] tracking-[-0.02em]"
-                  style={{ ["--lt-i" as string]: 1 }}
+                  style={{ ["--lt-i" as string]: 1, color: t.sectionStyles?.['hero']?.headingColor }}
                 >
                   {t.hero.headline}{" "}
                   {hasContent(t.hero.highlightedWord) && (
@@ -2643,19 +2747,19 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                   )}
                 </h1>
                 {hasContent(t.hero.subheadline) && (
-                  <p className="lt-rise font-body max-w-2xl text-base sm:text-lg leading-relaxed text-white" style={{ ["--lt-i" as string]: 2 }}>
+                  <p className="lt-rise font-body max-w-2xl text-base sm:text-lg leading-relaxed text-white whitespace-pre-line" style={{ ["--lt-i" as string]: 2 }}>
                     {t.hero.subheadline}
                   </p>
                 )}
                 <div className="lt-rise" style={{ ["--lt-i" as string]: 3 }}>
                   {t.hero.ctaButtonAction === "url" ? (
-                    <a href={resolveLink(t.hero.ctaButtonLink)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                    <a href={resolveLink(t.hero.ctaButtonLink)} className={ctaClass("lg")} style={sCta('hero')}>
                       <span className="lt-cta-sheen" aria-hidden="true" />
                       {hasContent(t.hero.ctaButtonText) ? t.hero.ctaButtonText : "Get Started"}
                       <CtaArrow />
                     </a>
                   ) : (
-                    <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                    <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={sCta('hero')}>
                       <span className="lt-cta-sheen" aria-hidden="true" />
                       {hasContent(t.hero.ctaButtonText) ? t.hero.ctaButtonText : "Get Started"}
                       <CtaArrow />
@@ -2686,7 +2790,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
         return (
             <section
-              className="relative overflow-hidden px-4 sm:px-6 lg:px-8 pt-10 pb-12 sm:pt-14 sm:pb-16 lg:pt-16 lg:pb-20"
+              className={`relative overflow-hidden px-4 sm:px-6 lg:px-8 pt-10 pb-12 sm:pt-14 sm:pb-16 lg:pt-16 lg:pb-20${sBgClass('hero')}`}
               style={heroBg}
             >
               <span className="lt-grain-layer" aria-hidden="true" />
@@ -2714,7 +2818,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
                 <h1
                   className="lt-rise font-display font-bold text-white mt-7 text-[clamp(2.1rem,5.4vw,4.1rem)] leading-[1.04] tracking-[-0.025em]"
-                  style={{ ["--lt-i" as string]: 1 }}
+                  style={{ ["--lt-i" as string]: 1, color: t.sectionStyles?.['hero']?.headingColor }}
                 >
                   {t.hero.headline}{" "}
                   {hasContent(t.hero.highlightedWord) && (
@@ -2752,7 +2856,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
                 {hasContent(t.hero.subheadline) && (
                   <p
-                    className="lt-rise font-body mx-auto mt-7 max-w-2xl text-base sm:text-lg leading-relaxed text-white"
+                    className="lt-rise font-body mx-auto mt-7 max-w-2xl text-base sm:text-lg leading-relaxed text-white whitespace-pre-line"
                     style={{ ["--lt-i" as string]: 3 }}
                   >
                     {t.hero.subheadline}
@@ -2776,13 +2880,13 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
                 <div className="lt-rise mt-11 flex flex-col items-center gap-8" style={{ ["--lt-i" as string]: 5 }}>
                   {t.hero.ctaButtonAction === "url" ? (
-                    <a href={resolveLink(t.hero.ctaButtonLink)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                    <a href={resolveLink(t.hero.ctaButtonLink)} className={ctaClass("lg")} style={sCta('hero')}>
                       <span className="lt-cta-sheen" aria-hidden="true" />
                       {hasContent(t.hero.ctaButtonText) ? t.hero.ctaButtonText : "Get Started"}
                       <CtaArrow />
                     </a>
                   ) : (
-                    <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                    <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={sCta('hero')}>
                       <span className="lt-cta-sheen" aria-hidden="true" />
                       {hasContent(t.hero.ctaButtonText) ? t.hero.ctaButtonText : "Get Started"}
                       <CtaArrow />
@@ -2815,7 +2919,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           const reverse = t.why.imageSide === "right";
           const images = t.why.points.slice(0, 6);
           return (
-            <section className="relative overflow-hidden py-8 sm:py-11 lg:py-14" style={t.sectionBg?.['why'] ? { backgroundColor: t.sectionBg['why'] } : deepStage}>
+            <section className={`relative overflow-hidden py-8 sm:py-11 lg:py-14${sBgClass('why')}`} style={{ ...sBgStyle('why', deepStage), ...sBgAnimStyle('why') }}>
               <span className="lt-grain-layer" aria-hidden="true" />
               <div className={`relative mx-auto flex max-w-7xl flex-col items-center gap-10 px-4 sm:px-6 lg:gap-16 lg:px-8 ${reverse ? "lg:flex-row-reverse" : "lg:flex-row"}`}>
                 <div className="grid w-full max-w-[560px] grid-cols-3 gap-3 lg:gap-5">
@@ -2833,7 +2937,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                   ))}
                 </div>
                 <div className="lt-reveal flex-1">
-                  <SectionHeading title={t.why.title} subtitle={t.why.subtitle} accent={c.accent} onDark align="left" />
+                  <SectionHeading title={t.why.title} subtitle={t.why.subtitle} accent={c.accent} onDark align="left" headingColor={t.sectionStyles?.['why']?.headingColor} />
                 </div>
               </div>
             </section>
@@ -2925,7 +3029,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                   {point.title}
                 </h3>
                 <p
-                  className={`font-body mt-2 leading-relaxed sm:mt-3 ${featured ? "" : "text-sm sm:text-base"}`}
+                  className={`font-body mt-2 leading-relaxed whitespace-pre-line sm:mt-3 ${featured ? "" : "text-sm sm:text-base"}`}
                   style={{ color: muted }}
                 >
                   {point.description}
@@ -2936,9 +3040,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         };
 
         return (
-        <section className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('why', c.bodyBg) }}>
+        <section className={`py-8 sm:py-11 lg:py-16${sBgClass('why')}`} style={{ ...sBgStyle('why', { backgroundColor: c.bodyBg }), ...sBgAnimStyle('why') }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading title={t.why.title} subtitle={t.why.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-9" />
+            <SectionHeading title={t.why.title} subtitle={t.why.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-9" headingColor={t.sectionStyles?.['why']?.headingColor} />
             <div className={`grid gap-4 sm:gap-6 lg:gap-7 ${whyBento ? "lg:grid-cols-5 lg:items-stretch" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
               {whyBento ? (
                 <>
@@ -2958,7 +3062,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
       case 'about':
         return t.about.visible && (
-        <section className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('about', hexToRgba(c.primary, 0.05)) }}>
+        <section className={`py-8 sm:py-11 lg:py-16${sBgClass('about')}`} style={{ ...sBgStyle('about', { backgroundColor: hexToRgba(c.primary, 0.05) }), ...sBgAnimStyle('about') }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-12 lg:gap-16 items-center">
               <div className="lt-reveal relative mx-auto w-full max-w-sm">
@@ -2986,10 +3090,18 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                 )}
                 <h2
                   className="lt-reveal font-display mt-6 text-[clamp(1.9rem,4vw,3.1rem)] font-bold leading-[1.08] tracking-[-0.02em]"
-                  style={{ ["--lt-i" as string]: 1, color: ink }}
+                  style={{ ["--lt-i" as string]: 1, color: t.sectionStyles?.['about']?.headingColor || ink }}
                 >
                   {t.about.name}
                 </h2>
+                {hasContent(t.about.subtitle) && (
+                  <p
+                    className="lt-reveal font-body mt-2 text-base sm:text-lg leading-relaxed whitespace-pre-line"
+                    style={{ ["--lt-i" as string]: 2, color: c.accent }}
+                  >
+                    {t.about.subtitle}
+                  </p>
+                )}
                 <p
                   className="lt-reveal font-body mt-5 text-base sm:text-lg leading-relaxed whitespace-pre-line"
                   style={{ ["--lt-i" as string]: 2, color: muted }}
@@ -3020,10 +3132,10 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         const rail = t.guidesRail;
         if (!rail || !rail.visible || rail.items.length === 0) return null;
         return (
-          <section id="guidesRail" className="relative overflow-hidden py-8 sm:py-11 lg:py-14" style={t.sectionBg?.['guidesRail'] ? { backgroundColor: t.sectionBg['guidesRail'] } : deepStage}>
+          <section id="guidesRail" className={`relative overflow-hidden py-8 sm:py-11 lg:py-14${sBgClass('guidesRail')}`} style={{ ...sBgStyle('guidesRail', deepStage), ...sBgAnimStyle('guidesRail') }}>
             <span className="lt-grain-layer" aria-hidden="true" />
             <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={rail.title} subtitle={rail.subtitle} accent={c.accent} onDark className="mb-5 lg:mb-7" />
+              <SectionHeading title={rail.title} subtitle={rail.subtitle} accent={c.accent} onDark className="mb-5 lg:mb-7" headingColor={t.sectionStyles?.['guidesRail']?.headingColor} />
             </div>
             {/* Horizontal-only rail. overflow-x-auto on its own is not enough:
                 per spec a non-visible value on one axis promotes the other from
@@ -3074,11 +3186,20 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
       case 'logos':
         return t.logos.enabled && t.logos.logos.length > 0 && (
-        <section className="py-12" style={{ backgroundColor: sbg('logos', c.bodyBg), borderTop: `1px solid ${hairline}`, borderBottom: `1px solid ${hairline}` }}>
+        <section
+          className={`py-12${sBgClass('logos')}`}
+          style={{ ...sBgStyle('logos', { backgroundColor: c.bodyBg }), ...sBgAnimStyle('logos'), borderTop: `1px solid ${hairline}`, borderBottom: `1px solid ${hairline}` }}
+        >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <p className="lt-reveal text-center font-body text-[11px] font-semibold uppercase tracking-[0.28em] mb-6" style={{ color: muted }}>
+            <p className="lt-reveal text-center font-body text-[11px] font-semibold uppercase tracking-[0.28em]" style={{ color: t.sectionStyles?.['logos']?.headingColor || muted }}>
               {t.logos.title}
             </p>
+            {hasContent(t.logos.subtitle) && (
+              <p className="lt-reveal text-center font-body text-sm mt-1.5" style={{ color: muted }}>
+                {t.logos.subtitle}
+              </p>
+            )}
+            <div className="mb-6" />
             <div className="flex flex-wrap items-center justify-center gap-10 opacity-60">
               {t.logos.logos.map((logo, i) => (
                 <div key={i} className="h-8 flex items-center">
@@ -3101,9 +3222,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       
       case 'gallery':
         return t.gallery.visible && t.gallery.images.length > 0 && (
-        <section className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('gallery', c.bodyBg) }}>
+        <section className={`py-8 sm:py-11 lg:py-16${sBgClass('gallery')}`} style={{ ...sBgStyle('gallery', { backgroundColor: c.bodyBg }), ...sBgAnimStyle('gallery') }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading title={t.gallery.title} subtitle={t.gallery.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6" />
+            <SectionHeading title={t.gallery.title} subtitle={t.gallery.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6" headingColor={t.sectionStyles?.['gallery']?.headingColor} />
             <div className="flex flex-wrap justify-center gap-4">
               {t.gallery.images.map((img, i) => (
                 <div
@@ -3133,8 +3254,8 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         return (
         <section
           id="stats"
-          className="relative overflow-hidden py-8 sm:py-11 lg:py-16"
-          style={t.sectionBg?.['stats'] ? { backgroundColor: t.sectionBg['stats'] } : deepStage}
+          className={`relative overflow-hidden py-8 sm:py-11 lg:py-16${sBgClass('stats')}`}
+          style={{ ...sBgStyle('stats', deepStage), ...sBgAnimStyle('stats') }}
         >
           <span className="lt-grain-layer" aria-hidden="true" />
           {t.stats.backgroundImage && (
@@ -3144,7 +3265,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             />
           )}
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading title={t.stats.title} subtitle={t.stats.subtitle} accent={c.accent} onDark className="mb-7" />
+            <SectionHeading title={t.stats.title} subtitle={t.stats.subtitle} accent={c.accent} onDark className="mb-7" headingColor={t.sectionStyles?.['stats']?.headingColor} />
             {isTrustRail ? (
               <div
                 className={`lt-reveal grid grid-cols-1 gap-6 rounded-[16px] p-6 md:p-10 ${
@@ -3200,13 +3321,13 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             {hasContent(t.stats.ctaButtonText) && (
               <div className="lt-reveal mt-8 text-center">
                 {t.stats.ctaButtonAction === "url" ? (
-                  <a href={resolveLink(t.stats.ctaButtonLink)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                  <a href={resolveLink(t.stats.ctaButtonLink)} className={ctaClass("lg")} style={sCta('stats')}>
                     <span className="lt-cta-sheen" aria-hidden="true" />
                     {t.stats.ctaButtonText}
                     <CtaArrow />
                   </a>
                 ) : (
-                  <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                  <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={sCta('stats')}>
                     <span className="lt-cta-sheen" aria-hidden="true" />
                     {t.stats.ctaButtonText}
                     <CtaArrow />
@@ -3224,10 +3345,10 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         if (!fmt || !fmt.visible || formatsSlides.length === 0) return null;
         const activeSlide = formatsSlides[Math.min(currentFormatsSlide, formatsSlides.length - 1)];
         return (
-          <section id="formats" className="relative overflow-hidden py-8 sm:py-11 lg:py-14" style={t.sectionBg?.['formats'] ? { backgroundColor: t.sectionBg['formats'] } : deepStage}>
+          <section id="formats" className={`relative overflow-hidden py-8 sm:py-11 lg:py-14${sBgClass('formats')}`} style={{ ...sBgStyle('formats', deepStage), ...sBgAnimStyle('formats') }}>
             <span className="lt-grain-layer" aria-hidden="true" />
             <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={fmt.title} subtitle={fmt.subtitle} accent={c.accent} onDark className="mb-5 lg:mb-7" />
+              <SectionHeading title={fmt.title} subtitle={fmt.subtitle} accent={c.accent} onDark className="mb-5 lg:mb-7" headingColor={t.sectionStyles?.['formats']?.headingColor} />
               <div className="lt-reveal relative w-full overflow-hidden rounded-[28px]" style={{ aspectRatio: "1310 / 440", border: "1px solid rgba(255,255,255,0.16)", boxShadow: "0 40px 80px -30px rgba(0,0,0,.7)" }}>
                 {formatsSlides.map((slide, index) => (
                   <div
@@ -3318,9 +3439,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             WebkitMaskImage: "linear-gradient(to right, transparent, #000 8%, #000 92%, transparent)",
           };
           return (
-            <section id="testimonials" className="overflow-hidden py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('testimonials', c.bodyBg) }}>
+            <section id="testimonials" className={`overflow-hidden py-8 sm:py-11 lg:py-16${sBgClass('testimonials')}`} style={{ ...sBgStyle('testimonials', { backgroundColor: c.bodyBg }), ...sBgAnimStyle('testimonials') }}>
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <SectionHeading title={t.testimonials.title} subtitle={t.testimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-9" />
+                <SectionHeading title={t.testimonials.title} subtitle={t.testimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-9" headingColor={t.sectionStyles?.['testimonials']?.headingColor} />
               </div>
               <div className="lt-reveal flex flex-col gap-5">
                 <div className="lt-marquee-row overflow-hidden" style={maskStyle}>
@@ -3339,9 +3460,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         }
 
         return (
-        <section id="testimonials" className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('testimonials', c.bodyBg) }}>
+        <section id="testimonials" className={`py-8 sm:py-11 lg:py-16${sBgClass('testimonials')}`} style={{ ...sBgStyle('testimonials', { backgroundColor: c.bodyBg }), ...sBgAnimStyle('testimonials') }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading title={t.testimonials.title} subtitle={t.testimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-9" />
+            <SectionHeading title={t.testimonials.title} subtitle={t.testimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-9" headingColor={t.sectionStyles?.['testimonials']?.headingColor} />
             <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
               {t.testimonials.items.map((item, i) => (
                 <div
@@ -3403,9 +3524,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
       case 'videoTestimonials':
         return t.videoTestimonials.visible && t.videoTestimonials.items.length > 0 && (
-        <section className="py-8 sm:py-11 lg:py-16 overflow-hidden" style={{ backgroundColor: sbg('videoTestimonials', hexToRgba(c.secondary, 0.05)) }}>
+        <section className={`py-8 sm:py-11 lg:py-16 overflow-hidden${sBgClass('videoTestimonials')}`} style={{ ...sBgStyle('videoTestimonials', { backgroundColor: hexToRgba(c.secondary, 0.05) }), ...sBgAnimStyle('videoTestimonials') }}>
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <SectionHeading title={t.videoTestimonials.title} subtitle={t.videoTestimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6" />
+            <SectionHeading title={t.videoTestimonials.title} subtitle={t.videoTestimonials.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6" headingColor={t.sectionStyles?.['videoTestimonials']?.headingColor} />
             <VideoTestimonialsSlider
               items={videoTestimonialItems}
               primaryColor={c.accent}
@@ -3420,9 +3541,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       
       case 'program':
         return t.program.visible && (
-      <section className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('program', hexToRgba(c.primary, 0.05)) }}>
+      <section className={`py-8 sm:py-11 lg:py-16${sBgClass('program')}`} style={{ ...sBgStyle('program', { backgroundColor: hexToRgba(c.primary, 0.05) }), ...sBgAnimStyle('program') }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <SectionHeading title={t.program.title} subtitle={t.program.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-9" />
+          <SectionHeading title={t.program.title} subtitle={t.program.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-9" headingColor={t.sectionStyles?.['program']?.headingColor} />
           {/* 4 points in a 3-column grid leave the last card alone on row 2 —
               a 2x2 grid reads as intentional. */}
           <div className={`grid gap-5 lg:gap-6 sm:grid-cols-2 ${t.program.points.length === 4 ? "" : "lg:grid-cols-3"}`}>
@@ -3460,7 +3581,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                       {point.title}
                     </h3>
                   </div>
-                  <p className="font-body mt-3.5 text-sm leading-relaxed sm:mt-4 sm:text-base" style={{ color: muted }}>
+                  <p className="font-body mt-3.5 text-sm leading-relaxed whitespace-pre-line sm:mt-4 sm:text-base" style={{ color: muted }}>
                     {point.description}
                   </p>
                 </div>
@@ -3470,13 +3591,13 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           {hasContent(t.program.ctaButtonText) && (
             <div className="lt-reveal text-center mt-10">
               {t.program.ctaButtonAction === "url" ? (
-                <a href={resolveLink(t.program.ctaButtonLink)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                <a href={resolveLink(t.program.ctaButtonLink)} className={ctaClass("lg")} style={sCta('program')}>
                   <span className="lt-cta-sheen" aria-hidden="true" />
                   {t.program.ctaButtonText}
                   <CtaArrow />
                 </a>
               ) : (
-                <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={sCta('program')}>
                   <span className="lt-cta-sheen" aria-hidden="true" />
                   {t.program.ctaButtonText}
                   <CtaArrow />
@@ -3491,12 +3612,12 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       case 'bonus':
         return t.bonus.enabled && t.bonus.items.length > 0 && (
         <section
-          className="relative overflow-hidden py-8 sm:py-11 lg:py-16"
-          style={t.sectionBg?.['bonus'] ? { backgroundColor: t.sectionBg['bonus'] } : stage}
+          className={`relative overflow-hidden py-8 sm:py-11 lg:py-16${sBgClass('bonus')}`}
+          style={{ ...sBgStyle('bonus', stage), ...sBgAnimStyle('bonus') }}
         >
           <span className="lt-grain-layer" aria-hidden="true" />
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading title={t.bonus.title} subtitle={t.bonus.subtitle} accent={c.accent} onDark className="mb-6 lg:mb-9" />
+            <SectionHeading title={t.bonus.title} subtitle={t.bonus.subtitle} accent={c.accent} onDark className="mb-6 lg:mb-9" headingColor={t.sectionStyles?.['bonus']?.headingColor} />
             <div className={`grid gap-4 sm:gap-6 lg:gap-8 mx-auto ${t.bonus.items.length >= 3 ? "sm:grid-cols-2 lg:grid-cols-3 max-w-6xl" : "sm:grid-cols-2 max-w-4xl"}`}>
               {t.bonus.items.map((item, i) => (
                 <div
@@ -3537,7 +3658,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                   <div className="min-w-0 sm:mt-6">
                     <h3 className="font-display text-[15px] font-bold leading-snug text-white sm:text-xl">{item.title}</h3>
                     {hasContent(item.description) && (
-                      <p className="font-body mt-1.5 text-[13px] leading-relaxed text-white sm:mt-2 sm:text-sm">{item.description}</p>
+                      <p className="font-body mt-1.5 text-[13px] leading-relaxed text-white whitespace-pre-line sm:mt-2 sm:text-sm">{item.description}</p>
                     )}
                   </div>
                 </div>
@@ -3551,7 +3672,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         const banner = t.appBanner;
         if (!banner || !banner.visible || !hasContent(banner.image)) return null;
         return (
-          <section id="appBanner" className="py-8 sm:py-11 lg:py-14" style={{ backgroundColor: sbg('appBanner', c.bodyBg) }}>
+          <section id="appBanner" className={`py-8 sm:py-11 lg:py-14${sBgClass('appBanner')}`} style={{ ...sBgStyle('appBanner', { backgroundColor: c.bodyBg }), ...sBgAnimStyle('appBanner') }}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <a
                 href={resolveLink(banner.link)}
@@ -3570,7 +3691,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
       case 'invitation':
         return t.invitation.enabled && (
-        <section className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('invitation', hexToRgba(c.primary, 0.06)) }}>
+        <section className={`py-8 sm:py-11 lg:py-16${sBgClass('invitation')}`} style={{ ...sBgStyle('invitation', { backgroundColor: hexToRgba(c.primary, 0.06) }), ...sBgAnimStyle('invitation') }}>
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
             <div className="lt-reveal relative overflow-hidden rounded-[24px] p-5 sm:rounded-[32px] sm:p-8 lg:p-12" style={stage}>
               <span className="lt-grain-layer" aria-hidden="true" />
@@ -3590,11 +3711,14 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                       {t.invitation.badgeText}
                     </div>
                   )}
-                  <h2 className="font-display mt-4 text-[clamp(1.55rem,3.6vw,2.9rem)] font-bold leading-[1.12] tracking-[-0.02em] text-white sm:mt-6">
+                  <h2
+                    className="font-display mt-4 text-[clamp(1.55rem,3.6vw,2.9rem)] font-bold leading-[1.12] tracking-[-0.02em] text-white sm:mt-6"
+                    style={{ color: t.sectionStyles?.['invitation']?.headingColor }}
+                  >
                     {t.invitation.title}
                   </h2>
                   {hasContent(t.invitation.subtitle) && (
-                    <p className="font-body mx-auto mt-3 max-w-2xl text-[13.5px] leading-relaxed text-white/75 sm:mt-4 sm:text-base">
+                    <p className="font-body mx-auto mt-3 max-w-2xl text-[13.5px] leading-relaxed text-white/75 whitespace-pre-line sm:mt-4 sm:text-base">
                       {t.invitation.subtitle}
                     </p>
                   )}
@@ -3642,7 +3766,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                       target="_blank"
                       rel="noopener noreferrer"
                       className={`${ctaClass("lg")} w-full sm:w-auto`}
-                      style={{ ...ctaStyle(c.primary, c.accent), ...(t.invitation.buttonTextColor ? { color: t.invitation.buttonTextColor } : {}) }}
+                      style={{ ...sCta('invitation'), ...(t.invitation.buttonTextColor ? { color: t.invitation.buttonTextColor } : {}) }}
                     >
                       <span className="lt-cta-sheen" aria-hidden="true" />
                       {t.invitation.buttonText}
@@ -3652,7 +3776,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                     <button
                       type="button"
                       className={`${ctaClass("lg")} w-full sm:w-auto`}
-                      style={{ ...ctaStyle(c.primary, c.accent), ...(t.invitation.buttonTextColor ? { color: t.invitation.buttonTextColor } : {}) }}
+                      style={{ ...sCta('invitation'), ...(t.invitation.buttonTextColor ? { color: t.invitation.buttonTextColor } : {}) }}
                       onClick={() => setInvitationDialogOpen(true)}
                     >
                       <span className="lt-cta-sheen" aria-hidden="true" />
@@ -3883,9 +4007,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
 
       case 'faq':
         return t.faq?.enabled && t.faq.items.length > 0 && (
-          <section className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('faq', c.bodyBg) }}>
+          <section className={`py-8 sm:py-11 lg:py-16${sBgClass('faq')}`} style={{ ...sBgStyle('faq', { backgroundColor: c.bodyBg }), ...sBgAnimStyle('faq') }}>
             <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={t.faq.title} subtitle={t.faq.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6" />
+              <SectionHeading title={t.faq.title} subtitle={t.faq.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6" headingColor={t.sectionStyles?.['faq']?.headingColor} />
               <div className="space-y-3">
                 {t.faq.items.map((item, i) => (
                   <div key={i} className="lt-reveal" style={{ ["--lt-i" as string]: i }}>
@@ -3911,8 +4035,11 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         return (
           <div
             id="announcementBar"
-            className={`${sticky ? "sticky top-0" : "relative"} z-40 w-full`}
-            style={t.sectionBg?.['announcementBar'] ? { backgroundColor: t.sectionBg['announcementBar'] } : { backgroundImage: `linear-gradient(90deg, ${c.accent} 0%, ${c.primary} 100%)` }}
+            className={`${sticky ? "sticky top-0" : "relative"} z-40 w-full${sBgClass('announcementBar')}`}
+            style={{
+              ...sBgStyle('announcementBar', { backgroundImage: `linear-gradient(90deg, ${c.accent} 0%, ${c.primary} 100%)` }),
+              ...sBgAnimStyle('announcementBar'),
+            }}
           >
             <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-3 gap-y-1.5 px-3 py-2 text-center sm:px-6 sm:py-2.5">
               {hasContent(bar.text) && (
@@ -3955,9 +4082,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         if (!ev?.visible) return null;
         const seats = Math.max(0, Math.min(100, ev.seatsFilledPercent || 0));
         return (
-          <section id="eventDetails" className="py-14 sm:py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('eventDetails', c.bodyBg) }}>
+          <section id="eventDetails" className={`py-14 sm:py-8 sm:py-11 lg:py-16${sBgClass('eventDetails')}`} style={{ ...sBgStyle('eventDetails', { backgroundColor: c.bodyBg }), ...sBgAnimStyle('eventDetails') }}>
             <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={ev.title} subtitle={ev.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-5 lg:mb-7" />
+              <SectionHeading title={ev.title} subtitle={ev.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-5 lg:mb-7" headingColor={t.sectionStyles?.['eventDetails']?.headingColor} />
               <div
                 className="lt-reveal overflow-hidden rounded-[26px] sm:rounded-[32px]"
                 style={{ backgroundColor: surface, border: `1px solid ${hairline}`, boxShadow: cardShadow }}
@@ -4035,13 +4162,13 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                       )}
                       {hasContent(ev.ctaButtonText) && (
                         ev.ctaButtonAction === "url" ? (
-                          <a href={resolveLink(ev.ctaButtonLink)} className={`${ctaClass("lg")} w-full sm:w-auto`} style={ctaStyle(c.primary, c.accent)}>
+                          <a href={resolveLink(ev.ctaButtonLink)} className={`${ctaClass("lg")} w-full sm:w-auto`} style={sCta('eventDetails')}>
                             <span className="lt-cta-sheen" aria-hidden="true" />
                             {ev.ctaButtonText}
                             <CtaArrow />
                           </a>
                         ) : (
-                          <button type="button" onClick={() => setInvitationDialogOpen(true)} className={`${ctaClass("lg")} w-full sm:w-auto`} style={ctaStyle(c.primary, c.accent)}>
+                          <button type="button" onClick={() => setInvitationDialogOpen(true)} className={`${ctaClass("lg")} w-full sm:w-auto`} style={sCta('eventDetails')}>
                             <span className="lt-cta-sheen" aria-hidden="true" />
                             {ev.ctaButtonText}
                             <CtaArrow />
@@ -4092,9 +4219,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         const impacts = (pr.impacts || []).filter(hasContent);
         if (items.length === 0 && impacts.length === 0) return null;
         return (
-          <section id="problems" className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('problems', c.bodyBg) }}>
+          <section id="problems" className={`py-8 sm:py-11 lg:py-16${sBgClass('problems')}`} style={{ ...sBgStyle('problems', { backgroundColor: c.bodyBg }), ...sBgAnimStyle('problems') }}>
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={pr.title} subtitle={pr.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-6" />
+              <SectionHeading title={pr.title} subtitle={pr.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6 lg:mb-6" headingColor={t.sectionStyles?.['problems']?.headingColor} />
               {items.length > 0 && (
                 <div className={`grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-5 ${items.length === 4 ? "" : "lg:grid-cols-3"}`}>
                   {items.map((item, i) => (
@@ -4120,7 +4247,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                       <div className="min-w-0">
                         <h3 className="font-body text-sm font-semibold leading-snug sm:text-base" style={{ color: ink }}>{item.title}</h3>
                         {hasContent(item.description) && (
-                          <p className="font-body mt-1 text-[13px] leading-relaxed sm:mt-1.5 sm:text-sm" style={{ color: muted }}>{item.description}</p>
+                          <p className="font-body mt-1 text-[13px] leading-relaxed whitespace-pre-line sm:mt-1.5 sm:text-sm" style={{ color: muted }}>{item.description}</p>
                         )}
                       </div>
                     </div>
@@ -4165,9 +4292,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         if (modules.length === 0) return null;
         const asCards = cur.displayMode === "cards";
         return (
-          <section id="curriculum" className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('curriculum', c.bodyBg) }}>
+          <section id="curriculum" className={`py-8 sm:py-11 lg:py-16${sBgClass('curriculum')}`} style={{ ...sBgStyle('curriculum', { backgroundColor: c.bodyBg }), ...sBgAnimStyle('curriculum') }}>
             <div className={`mx-auto px-4 sm:px-6 lg:px-8 ${asCards ? "max-w-7xl" : "max-w-3xl"}`}>
-              <SectionHeading title={cur.title} subtitle={cur.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6" />
+              <SectionHeading title={cur.title} subtitle={cur.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6" headingColor={t.sectionStyles?.['curriculum']?.headingColor} />
               {asCards ? (
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
                   {modules.map((m, i) => (
@@ -4192,7 +4319,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                         )}
                         <h3 className="font-display mt-2 text-lg font-bold leading-snug" style={{ color: ink }}>{m.title}</h3>
                         {hasContent(m.description) && (
-                          <p className="font-body mt-2 text-sm leading-relaxed" style={{ color: muted }}>{m.description}</p>
+                          <p className="font-body mt-2 text-sm leading-relaxed whitespace-pre-line" style={{ color: muted }}>{m.description}</p>
                         )}
                         {(m.bullets || []).filter(hasContent).length > 0 && (
                           <ul className="mt-4 space-y-2">
@@ -4229,13 +4356,13 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
               {hasContent(cur.ctaButtonText) && (
                 <div className="lt-reveal mt-7 text-center">
                   {cur.ctaButtonAction === "url" ? (
-                    <a href={resolveLink(cur.ctaButtonLink)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                    <a href={resolveLink(cur.ctaButtonLink)} className={ctaClass("lg")} style={sCta('curriculum')}>
                       <span className="lt-cta-sheen" aria-hidden="true" />
                       {cur.ctaButtonText}
                       <CtaArrow />
                     </a>
                   ) : (
-                    <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                    <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={sCta('curriculum')}>
                       <span className="lt-cta-sheen" aria-hidden="true" />
                       {cur.ctaButtonText}
                       <CtaArrow />
@@ -4256,12 +4383,12 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         return (
           <section
             id="pricing"
-            className="relative overflow-hidden py-8 sm:py-11 lg:py-16"
-            style={t.sectionBg?.['pricing'] ? { backgroundColor: t.sectionBg['pricing'] } : stage}
+            className={`relative overflow-hidden py-8 sm:py-11 lg:py-16${sBgClass('pricing')}`}
+            style={{ ...sBgStyle('pricing', stage), ...sBgAnimStyle('pricing') }}
           >
             <span className="lt-grain-layer" aria-hidden="true" />
             <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={pricing.title} subtitle={pricing.subtitle} accent={c.accent} onDark className="mb-6 lg:mb-9" />
+              <SectionHeading title={pricing.title} subtitle={pricing.subtitle} accent={c.accent} onDark className="mb-6 lg:mb-9" headingColor={t.sectionStyles?.['pricing']?.headingColor} />
               <div
                 className={`grid grid-cols-1 gap-5 sm:gap-6 ${tiers.length >= 3 ? "lg:grid-cols-3" : tiers.length === 2 ? "sm:grid-cols-2 lg:max-w-4xl lg:mx-auto" : "max-w-md mx-auto"}`}
               >
@@ -4312,7 +4439,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                         )}
                       </div>
                       {hasContent(tier.description) && (
-                        <p className="font-body mt-3 text-sm leading-relaxed" style={{ color: hot ? "#4B5563" : "rgba(255,255,255,0.66)" }}>
+                        <p className="font-body mt-3 text-sm leading-relaxed whitespace-pre-line" style={{ color: hot ? "#4B5563" : "rgba(255,255,255,0.66)" }}>
                           {tier.description}
                         </p>
                       )}
@@ -4338,7 +4465,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                             <a
                               href={resolveLink(tier.ctaLink)}
                               className={`${ctaClass("md")} w-full`}
-                              style={hot ? ctaStyle(c.primary, c.accent) : { backgroundColor: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.28)" }}
+                              style={hot ? sCta('pricing') : { backgroundColor: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.28)" }}
                             >
                               <span className="lt-cta-sheen" aria-hidden="true" />
                               {tier.ctaText}
@@ -4349,7 +4476,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                               type="button"
                               onClick={() => setInvitationDialogOpen(true)}
                               className={`${ctaClass("md")} w-full`}
-                              style={hot ? ctaStyle(c.primary, c.accent) : { backgroundColor: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.28)" }}
+                              style={hot ? sCta('pricing') : { backgroundColor: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.28)" }}
                             >
                               <span className="lt-cta-sheen" aria-hidden="true" />
                               {tier.ctaText}
@@ -4384,9 +4511,9 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           return <span className="font-body text-xs sm:text-sm" style={{ color: muted }}>{value}</span>;
         };
         return (
-          <section id="comparison" className="py-8 sm:py-11 lg:py-16" style={{ backgroundColor: sbg('comparison', c.bodyBg) }}>
+          <section id="comparison" className={`py-8 sm:py-11 lg:py-16${sBgClass('comparison')}`} style={{ ...sBgStyle('comparison', { backgroundColor: c.bodyBg }), ...sBgAnimStyle('comparison') }}>
             <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={cmp.title} subtitle={cmp.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6" />
+              <SectionHeading title={cmp.title} subtitle={cmp.subtitle} accent={c.accent} onDark={onDarkBody} className="mb-6" headingColor={t.sectionStyles?.['comparison']?.headingColor} />
               {/* Wide table scrolls inside its own box so the page body never
                   scrolls sideways on a phone. The hint below only shows at the
                   widths where the table actually overflows. */}
@@ -4452,12 +4579,12 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         return (
           <section
             id="guarantee"
-            className="relative overflow-hidden py-8 sm:py-11 lg:py-16"
-            style={t.sectionBg?.['guarantee'] ? { backgroundColor: t.sectionBg['guarantee'] } : deepStage}
+            className={`relative overflow-hidden py-8 sm:py-11 lg:py-16${sBgClass('guarantee')}`}
+            style={{ ...sBgStyle('guarantee', deepStage), ...sBgAnimStyle('guarantee') }}
           >
             <span className="lt-grain-layer" aria-hidden="true" />
             <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-              <SectionHeading title={g.title} subtitle={g.subtitle} accent={c.accent} onDark className="mb-6 lg:mb-6" />
+              <SectionHeading title={g.title} subtitle={g.subtitle} accent={c.accent} onDark className="mb-6 lg:mb-6" headingColor={t.sectionStyles?.['guarantee']?.headingColor} />
               <div className={`grid grid-cols-1 gap-5 sm:gap-6 ${items.length >= 3 ? "md:grid-cols-3" : "sm:grid-cols-2"}`}>
                 {items.map((item, i) => (
                   <div
@@ -4477,7 +4604,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                       <ProgramIcon name={item.icon} className="h-6 w-6" style={{ color: "#fff" } as React.CSSProperties} />
                     </span>
                     <h3 className="font-display mt-5 text-lg font-bold leading-snug text-white">{item.title}</h3>
-                    <p className="font-body mt-2.5 text-sm leading-relaxed text-white/70">{item.description}</p>
+                    <p className="font-body mt-2.5 text-sm leading-relaxed text-white/70 whitespace-pre-line">{item.description}</p>
                   </div>
                 ))}
               </div>
@@ -4502,8 +4629,8 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       case 'footer':
         return t.footer.enabled && (
       <footer
-        className="relative overflow-hidden"
-        style={t.sectionBg?.['footer'] ? { backgroundColor: t.sectionBg['footer'] } : deepStage}
+        className={`relative overflow-hidden${sBgClass('footer')}`}
+        style={{ ...sBgStyle('footer', deepStage), ...sBgAnimStyle('footer') }}
       >
         <span className="lt-grain-layer" aria-hidden="true" />
         <span
@@ -4517,7 +4644,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             <div className="lt-reveal mb-6 flex justify-center"><RitualRule color={c.accent} /></div>
             <h2
               className="lt-reveal font-display text-[clamp(2rem,4.6vw,3.6rem)] font-bold leading-[1.06] tracking-[-0.025em] text-white"
-              style={{ ["--lt-i" as string]: 1 }}
+              style={{ ["--lt-i" as string]: 1, color: t.sectionStyles?.['footer']?.headingColor }}
             >
               {t.footer.cta.title}
             </h2>
@@ -4532,13 +4659,13 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
             {(t.footer.cta.showCtaButton ?? true) && hasContent(t.footer.cta.ctaButtonText) && (
               <div className="lt-reveal mt-10" style={{ ["--lt-i" as string]: 3 }}>
                 {t.footer.cta.ctaButtonAction === "url" ? (
-                  <a href={resolveLink(t.footer.cta.ctaButtonLink)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                  <a href={resolveLink(t.footer.cta.ctaButtonLink)} className={ctaClass("lg")} style={sCta('footer')}>
                     <span className="lt-cta-sheen" aria-hidden="true" />
                     {t.footer.cta.ctaButtonText}
                     <CtaArrow />
                   </a>
                 ) : (
-                  <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={ctaStyle(c.primary, c.accent)}>
+                  <button type="button" onClick={() => setInvitationDialogOpen(true)} className={ctaClass("lg")} style={sCta('footer')}>
                     <span className="lt-cta-sheen" aria-hidden="true" />
                     {t.footer.cta.ctaButtonText}
                     <CtaArrow />
@@ -4690,9 +4817,12 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       }}
     >
       {/* Inject marquee animation + fonts. A chosen template font overrides the
-          default body (and heading) fonts across the whole page. */}
+          default body (and heading) fonts across the whole page. Marcellus,
+          Playfair Display and Inter (the families this used to @import on
+          every landing page — a render-blocking request each time) are all
+          part of the one shared, deferred stylesheet the root layout already
+          loads sitewide — see lib/fonts.ts's GOOGLE_FAMILIES. */}
       <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Marcellus&family=Playfair+Display:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-33.333%); } }
         @keyframes floating-cta-ring { 0% { transform: scale(0.85); opacity: 0.8; } 70% { transform: scale(1.25); opacity: 0; } 100% { opacity: 0; } }
         @keyframes floating-cta-bob { 0% { transform: translateY(0); } 50% { transform: translateY(-3px); } 100% { transform: translateY(0); } }
@@ -4729,6 +4859,53 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         }
         @keyframes lt-proof-pop { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
         .lt-proof-pop { animation: lt-proof-pop .5s cubic-bezier(.16,1,.3,1) both; }
+
+        /* Custom per-section gradient backgrounds (Template tab → Section
+           Style → Background → Gradient). Duration is set inline per section
+           via the animationDuration style property; these classes only carry
+           the animation's shape. "shift" drifts the gradient across an
+           oversized canvas (linear/radial/conic all read fine); "pulse" is a
+           filter-only breathing effect, safe for every gradient type; "rotate"
+           animates a registered angle custom property so linear/conic
+           gradients can sweep smoothly — unsupported browsers just render the
+           gradient at its static starting angle instead of erroring. */
+        @property --lt-grad-angle {
+          syntax: '<angle>';
+          inherits: false;
+          initial-value: 0deg;
+        }
+        .lt-grad-shift {
+          background-size: 200% 200% !important;
+          animation-name: lt-grad-shift;
+          animation-timing-function: ease;
+          animation-iteration-count: infinite;
+        }
+        @keyframes lt-grad-shift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .lt-grad-pulse {
+          animation-name: lt-grad-pulse;
+          animation-timing-function: ease-in-out;
+          animation-iteration-count: infinite;
+        }
+        @keyframes lt-grad-pulse {
+          0%, 100% { filter: saturate(1) brightness(1); }
+          50% { filter: saturate(1.3) brightness(1.08); }
+        }
+        .lt-grad-rotate {
+          animation-name: lt-grad-rotate;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
+        }
+        @keyframes lt-grad-rotate {
+          from { --lt-grad-angle: 0deg; }
+          to { --lt-grad-angle: 360deg; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .lt-grad-shift, .lt-grad-pulse, .lt-grad-rotate { animation: none !important; }
+        }
 
         /* Seats-remaining bar. The fill only starts from zero once .lt-anim is
            on the root and the row has been revealed — with JS off, the inline

@@ -83,6 +83,7 @@ import {
   ListChecks,
   Megaphone,
   Tag,
+  RotateCcw,
   type LucideIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -98,10 +99,14 @@ import {
   resolveSectionOrder,
   getSectionVisibility,
   applySectionVisibility,
-  isRichBlockKey,
+  DEFAULT_SECTION_GRADIENT,
+  sectionGradientCss,
   type LandingTemplateData,
   type MediaFieldOptions,
   type SectionStyleOptions,
+  type SectionGradient,
+  type SectionGradientType,
+  type SectionGradientAnimation,
 } from "@/lib/template-types";
 import { SECTION_DND_TYPE, NEW_BLOCK_DND_TYPE } from "@/components/storefront/landing-template";
 import { FONT_OPTIONS } from "@/lib/fonts";
@@ -213,30 +218,67 @@ function SectionBgField({ sectionKey, value, onChange }: { sectionKey: string; v
     });
   };
 
+  const bgMode = styles.bgMode ?? "solid";
+
   return (
     <div className="rounded-lg border border-gray-100 bg-gray-50/60 p-2.5 space-y-2.5">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Section Style</p>
-      <div className="flex items-center justify-between">
-        <Label className="text-xs text-gray-500">Background color</Label>
-        <div className="flex items-center gap-1.5">
-          <input
-            type="color"
-            value={value || "#ffffff"}
-            onChange={(e) => onChange(sectionKey, e.target.value)}
-            className="h-6 w-8 rounded border border-gray-200 cursor-pointer p-0.5 bg-white"
-          />
-          {value && (
+
+      {ctx && (
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-gray-500">Background</Label>
+          <div className="flex rounded-md border border-gray-200 bg-white p-0.5">
             <button
               type="button"
-              onClick={() => onChange(sectionKey, "")}
-              className="text-[10px] text-gray-400 hover:text-red-500 transition"
-              title="Reset to default"
+              onClick={() => setStyles({ bgMode: "solid" })}
+              className={`px-2 py-1 rounded text-[10px] font-semibold transition ${
+                bgMode === "solid" ? "bg-violet-600 text-white" : "text-gray-500 hover:text-gray-700"
+              }`}
             >
-              ✕
+              Solid
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => setStyles({ bgMode: "gradient", bgGradient: styles.bgGradient || DEFAULT_SECTION_GRADIENT })}
+              className={`px-2 py-1 rounded text-[10px] font-semibold transition ${
+                bgMode === "gradient" ? "bg-violet-600 text-white" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Gradient
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {bgMode === "gradient" && ctx ? (
+        <GradientEditorFields
+          gradient={styles.bgGradient || DEFAULT_SECTION_GRADIENT}
+          onChange={(g) => setStyles({ bgGradient: g })}
+        />
+      ) : (
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-gray-500">Background color</Label>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="color"
+              value={value || "#ffffff"}
+              onChange={(e) => onChange(sectionKey, e.target.value)}
+              className="h-6 w-8 rounded border border-gray-200 cursor-pointer p-0.5 bg-white"
+            />
+            {value && (
+              <button
+                type="button"
+                onClick={() => onChange(sectionKey, "")}
+                className="text-[10px] text-gray-400 hover:text-red-500 transition"
+                title="Reset to default"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {ctx && (
         <div className="grid grid-cols-2 gap-2">
           <div>
@@ -263,6 +305,186 @@ function SectionBgField({ sectionKey, value, onChange }: { sectionKey: string; v
           </div>
         </div>
       )}
+      {ctx && (
+        <div className="space-y-2 pt-1 border-t border-gray-200/70">
+          <SectionStyleColorRow
+            label="Heading color"
+            value={styles.headingColor}
+            onChange={(v) => setStyles({ headingColor: v || undefined })}
+          />
+          <SectionStyleColorRow
+            label="Button color"
+            value={styles.buttonColor}
+            onChange={(v) => setStyles({ buttonColor: v || undefined })}
+          />
+          <SectionStyleColorRow
+            label="Button text color"
+            value={styles.buttonTextColor}
+            onChange={(v) => setStyles({ buttonTextColor: v || undefined })}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Full gradient authoring UI for a section's background: pattern (linear /
+// radial / conic), angle, any number of color stops with a 0–100% position
+// each, and an optional animation. Mirrors the CSS `sectionGradientCss`
+// builds in lib/template-types so the preview swatch always matches what
+// the live page renders.
+function GradientEditorFields({ gradient, onChange }: { gradient: SectionGradient; onChange: (g: SectionGradient) => void }) {
+  const g = gradient;
+  const patch = (p: Partial<SectionGradient>) => onChange({ ...g, ...p });
+  const setStop = (i: number, p: Partial<{ color: string; position: number }>) => {
+    const stops = g.stops.map((s, j) => (j === i ? { ...s, ...p } : s));
+    patch({ stops });
+  };
+  const addStop = () => {
+    const last = g.stops[g.stops.length - 1];
+    const pos = last ? Math.min(100, last.position + 20) : 50;
+    patch({ stops: [...g.stops, { color: "#ffffff", position: pos }] });
+  };
+  const removeStop = (i: number) => {
+    if (g.stops.length <= 2) return;
+    patch({ stops: g.stops.filter((_, j) => j !== i) });
+  };
+  const canRotate = g.type !== "radial";
+  const angleIsEditable = g.type !== "radial" && !(g.animation === "rotate" && canRotate);
+
+  return (
+    <div className="space-y-2.5">
+      <div
+        className="h-10 rounded-lg border border-gray-200"
+        style={{ backgroundImage: sectionGradientCss({ ...g, animation: "none" }) }}
+        title="Preview"
+      />
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-[10px] text-gray-400">Pattern</Label>
+          <select
+            value={g.type}
+            onChange={(e) => {
+              const type = e.target.value as SectionGradientType;
+              patch({ type, animation: type === "radial" && g.animation === "rotate" ? "none" : g.animation });
+            }}
+            className="w-full h-7 rounded-md border border-gray-200 bg-white px-1.5 text-xs mt-0.5"
+          >
+            <option value="linear">Linear</option>
+            <option value="radial">Radial</option>
+            <option value="conic">Conic</option>
+          </select>
+        </div>
+        <div>
+          <Label className="text-[10px] text-gray-400">Animation</Label>
+          <select
+            value={g.animation}
+            onChange={(e) => patch({ animation: e.target.value as SectionGradientAnimation })}
+            className="w-full h-7 rounded-md border border-gray-200 bg-white px-1.5 text-xs mt-0.5"
+          >
+            <option value="none">None</option>
+            <option value="shift">Shift (drift)</option>
+            <option value="pulse">Pulse (breathe)</option>
+            {canRotate && <option value="rotate">Rotate</option>}
+          </select>
+        </div>
+      </div>
+
+      {angleIsEditable && (
+        <div>
+          <Label className="text-[10px] text-gray-400">Angle ({g.angle}°)</Label>
+          <input
+            type="range"
+            min={0}
+            max={360}
+            value={g.angle}
+            onChange={(e) => patch({ angle: Number(e.target.value) })}
+            className="w-full mt-0.5"
+          />
+        </div>
+      )}
+
+      {g.animation !== "none" && (
+        <div>
+          <Label className="text-[10px] text-gray-400">Speed ({g.animationDuration}s)</Label>
+          <input
+            type="range"
+            min={1}
+            max={30}
+            value={g.animationDuration}
+            onChange={(e) => patch({ animationDuration: Number(e.target.value) })}
+            className="w-full mt-0.5"
+          />
+        </div>
+      )}
+
+      <div className="space-y-1.5">
+        <Label className="text-[10px] text-gray-400">Colors</Label>
+        {g.stops.map((stop, i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <input
+              type="color"
+              value={stop.color}
+              onChange={(e) => setStop(i, { color: e.target.value })}
+              className="h-7 w-8 flex-shrink-0 rounded border border-gray-200 cursor-pointer p-0.5 bg-white"
+            />
+            <Input
+              value={stop.color}
+              onChange={(e) => setStop(i, { color: e.target.value })}
+              className="h-7 text-[11px] font-mono bg-white border-gray-200 flex-1 min-w-0"
+            />
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={stop.position}
+              onChange={(e) => setStop(i, { position: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })}
+              className="h-7 w-14 flex-shrink-0 text-[11px] bg-white border-gray-200"
+              title="Position %"
+            />
+            <span className="text-[10px] text-gray-400 flex-shrink-0">%</span>
+            {g.stops.length > 2 && (
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 flex-shrink-0 text-red-500" onClick={() => removeStop(i)}>
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+        ))}
+        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={addStop}>
+          <Plus className="h-3 w-3 mr-1" /> Add Color Stop
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// One reset-able color swatch row, used for the per-section heading/button
+// color overrides above. Unlike the section background field (always has a
+// value), these three are optional — an unset value means "use the theme
+// default," which the ✕ button restores.
+function SectionStyleColorRow({ label, value, onChange }: { label: string; value?: string; onChange: (v: string) => void }) {
+  return (
+    <div className="flex items-center justify-between">
+      <Label className="text-[10px] text-gray-400">{label}</Label>
+      <div className="flex items-center gap-1.5">
+        <input
+          type="color"
+          value={value || "#000000"}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-6 w-8 rounded border border-gray-200 cursor-pointer p-0.5 bg-white"
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="text-[10px] text-gray-400 hover:text-red-500 transition"
+            title="Reset to default"
+          >
+            ✕
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -309,6 +531,104 @@ function IconPicker({ value, onChange }: { value: string; onChange: (name: strin
 }
 
 // ---------------------------------------------------------------------------
+// "Add Template Element" — one button that covers both halves of "add
+// something back": brand-new repeatable blocks (Content Block, Rich Content
+// Block — the only element types a page can have more than one of) and
+// restoring any section that was deleted earlier. The Blocks palette below
+// already lets you restore a deleted section by clicking its chip; this is
+// the more discoverable, explicitly-labeled entry point for the same action
+// plus the "add another" case the palette doesn't cover.
+// ---------------------------------------------------------------------------
+function AddElementMenu({
+  deletedSections,
+  onRestoreSection,
+  onAddContentBlock,
+  onAddRichBlock,
+}: {
+  deletedSections: string[];
+  onRestoreSection: (key: string) => void;
+  onAddContentBlock: () => void;
+  onAddRichBlock?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-center gap-1.5 h-9 rounded-xl bg-violet-600 text-white text-[12px] font-semibold shadow-sm hover:bg-violet-700 transition"
+      >
+        <Plus className="h-4 w-4" />
+        Add Template Element
+        {deletedSections.length > 0 && (
+          <span className="ml-0.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-white/20 text-[10px] leading-none">
+            {deletedSections.length}
+          </span>
+        )}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute z-50 top-11 left-0 right-0 rounded-xl border border-gray-200 bg-white shadow-xl p-2 max-h-96 overflow-y-auto">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 px-1.5 pt-1 pb-1.5">
+              New block
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                onAddContentBlock();
+                setOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs text-gray-700 hover:bg-violet-50 hover:text-violet-700 transition"
+            >
+              <Plus className="h-3.5 w-3.5 text-violet-500 flex-shrink-0" /> Content Block
+            </button>
+            {onAddRichBlock && (
+              <button
+                type="button"
+                onClick={() => {
+                  onAddRichBlock();
+                  setOpen(false);
+                }}
+                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs text-gray-700 hover:bg-violet-50 hover:text-violet-700 transition"
+              >
+                <Plus className="h-3.5 w-3.5 text-violet-500 flex-shrink-0" /> Rich Content Block
+              </button>
+            )}
+
+            <div className="my-1.5 h-px bg-gray-100" />
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 px-1.5 pb-1.5">
+              Deleted sections
+            </p>
+            {deletedSections.length === 0 ? (
+              <p className="px-1.5 pb-1 text-[11px] text-gray-400 leading-relaxed">
+                Nothing deleted right now — sections you delete from the page will show up here to bring back.
+              </p>
+            ) : (
+              deletedSections.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => {
+                    onRestoreSection(key);
+                    setOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs text-gray-700 hover:bg-violet-50 hover:text-violet-700 transition"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 text-violet-500 flex-shrink-0" />
+                  <span className="truncate">{SECTION_LABELS[key] || key}</span>
+                </button>
+              ))
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Collapsible Section card
 // Dragging starts ONLY from the grip handle (so the rest of the card stays
 // freely clickable/selectable), shows a slim drop-position indicator instead
@@ -339,6 +659,7 @@ function Section({
   activeNonce,
   visible,
   onToggleVisible,
+  onDelete,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -353,6 +674,7 @@ function Section({
   activeNonce?: number;
   visible?: boolean;
   onToggleVisible?: () => void;
+  onDelete?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const ref = React.useRef<HTMLDivElement>(null);
@@ -448,6 +770,19 @@ function Section({
             }`}
           >
             {visible === false ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            title="Delete section"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="h-6 w-6 flex items-center justify-center rounded-md flex-shrink-0 text-gray-300 hover:text-red-500 transition-colors"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
           </button>
         )}
         <button
@@ -836,6 +1171,12 @@ interface TemplateEditorProps {
   // absent from the canvas — hide its sidebar card too (see
   // isLegacyRichContentEmpty in landing-template.tsx).
   hideLegacyRichContent?: boolean;
+  // Creates a brand-new, independent rich-content block at the end of the
+  // page and focuses it on the canvas — only the canvas/rich-editor side
+  // knows how to allocate one (see insertRichBlockAt in rich-editor.tsx), so
+  // the "Add Template Element" button calls back up for it. Omitted (e.g. in
+  // contexts with no live canvas) simply hides that option from the menu.
+  onAddRichBlock?: () => void;
 }
 
 export function TemplateEditor({
@@ -846,6 +1187,7 @@ export function TemplateEditor({
   activeNonce,
   onSelectSection,
   hideLegacyRichContent,
+  onAddRichBlock,
 }: TemplateEditorProps) {
   const [draggedSection, setDraggedSection] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<{ key: string; pos: "top" | "bottom" } | null>(null);
@@ -882,7 +1224,10 @@ export function TemplateEditor({
     }
   }, [landingPageId, testEmailTo, data.invitation.thankYouButtons]);
   
-  const sectionOrder = useMemo(() => resolveSectionOrder(data.sectionOrder), [data.sectionOrder]);
+  const sectionOrder = useMemo(
+    () => resolveSectionOrder(data.sectionOrder, data.deletedSections),
+    [data.sectionOrder, data.deletedSections]
+  );
   const mediaSettings = data.mediaSettings || {};
 
   const update = useCallback(
@@ -952,6 +1297,55 @@ export function TemplateEditor({
     },
     [sectionOrder, data, onChange]
   );
+
+  // Full delete (not hide) — pulls the key out of sectionOrder and records it
+  // in deletedSections so resolveSectionOrder stops re-appending it as "new".
+  // The section's own data is left in place, so restoring it from the Blocks
+  // palette brings its old content straight back.
+  const deleteSection = useCallback(
+    (key: string) => {
+      const order = sectionOrder.filter((k) => k !== key);
+      onChange({
+        ...data,
+        sectionOrder: order,
+        deletedSections: [...new Set([...(data.deletedSections || []), key])],
+      });
+    },
+    [sectionOrder, data, onChange]
+  );
+
+  // Restores a previously-deleted canonical section: re-appends it to
+  // sectionOrder and drops it from deletedSections so resolveSectionOrder
+  // stops excluding it. Its data was never touched by delete, so this brings
+  // the section back exactly as it was left.
+  const restoreSection = useCallback(
+    (key: string) => {
+      onChange({
+        ...data,
+        sectionOrder: [...sectionOrder, key],
+        deletedSections: (data.deletedSections || []).filter((k) => k !== key),
+      });
+      onSelectSection?.(key);
+    },
+    [sectionOrder, data, onChange, onSelectSection]
+  );
+
+  // Adds a new instance to the repeatable contentBlocks list — shared by the
+  // "Add Template Element" menu and the draggable palette chip below.
+  const addContentBlock = useCallback(() => {
+    const blocks = [...(data.contentBlocks || [])];
+    blocks.push({
+      enabled: true,
+      layout: "media-left" as const,
+      mediaType: "image" as const,
+      mediaUrl: "",
+      textFormat: "plain" as const,
+      heading: "New Content Block",
+      content: "Write your content here...",
+    });
+    onChange({ ...data, contentBlocks: blocks });
+    onSelectSection?.("contentBlocks");
+  }, [data, onChange, onSelectSection]);
 
   const cleanupDrag = useCallback(() => {
     setDraggedSection(null);
@@ -1055,6 +1449,14 @@ export function TemplateEditor({
       key === "richContent"
         ? undefined
         : () => onChange(applySectionVisibility(data, key, !getSectionVisibility(data, key))),
+    onDelete:
+      key === "richContent"
+        ? undefined
+        : () => {
+            if (window.confirm(`Delete the "${SECTION_LABELS[key] || key}" section? You can add it back later from "Add Template Element" above.`)) {
+              deleteSection(key);
+            }
+          },
   });
 
   // -------------------------------------------------------------------------
@@ -1596,6 +1998,10 @@ export function TemplateEditor({
         <div>
           <Label className="text-xs text-gray-500">Name</Label>
           <Input value={data.about.name} onChange={(e) => update("about", { name: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Subheadline</Label>
+          <Input value={data.about.subtitle ?? ''} onChange={(e) => update("about", { subtitle: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" placeholder="Short line under the name" />
         </div>
         <div>
           <Label className="text-xs text-gray-500">Description</Label>
@@ -2303,6 +2709,10 @@ export function TemplateEditor({
         <div>
           <Label className="text-xs text-gray-500">Title</Label>
           <Input value={data.logos.title} onChange={(e) => update("logos", { title: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">Subheadline</Label>
+          <Input value={data.logos.subtitle ?? ''} onChange={(e) => update("logos", { subtitle: e.target.value })} className="h-8 text-xs mt-1 bg-gray-50 border-gray-200" placeholder="Short line under the title" />
         </div>
         {data.logos.logos.map((logo, i) => {
           const logoKey = mediaKey("logos", "logos", i, "image");
@@ -3716,40 +4126,65 @@ export function TemplateEditor({
   return (
     <TemplateEditorCtx.Provider value={{ data, onChange }}>
       <div className="space-y-3 p-1">
+        <AddElementMenu
+          deletedSections={data.deletedSections || []}
+          onRestoreSection={restoreSection}
+          onAddContentBlock={addContentBlock}
+          onAddRichBlock={onAddRichBlock}
+        />
+
         {/* ===== Blocks palette — drag chips onto the canvas (Elementor-style) ===== */}
         <div className="border border-gray-200 rounded-xl bg-white p-3">
           <p className="text-[11px] font-semibold text-gray-700 flex items-center gap-1.5 mb-1">
             <ArrowUpDown className="h-3.5 w-3.5 text-violet-500" /> Blocks
           </p>
           <p className="text-[10px] text-gray-400 mb-2 leading-relaxed">
-            Drag a block onto the canvas to position it, or click to edit. Grayed-out blocks are hidden.
+            Drag a block onto the canvas to position it, or click to edit. Grayed-out blocks are hidden; dashed ones were deleted — click to bring one back.
           </p>
           <div className="grid grid-cols-2 gap-1.5">
-            {sectionOrder
+            {(CANONICAL_SECTIONS as readonly string[])
               // Dynamic rich blocks are created via the Elements-tab drag
               // path (or the canvas "+" popup), not re-added from this
               // fixed-sections palette — they're managed entirely on the
-              // canvas via their own floating toolbar.
-              .filter((key) => key !== "richContent" && !isRichBlockKey(key))
+              // canvas via their own floating toolbar. Iterates the full
+              // canonical list (not just sectionOrder) so a deleted section's
+              // chip stays here as the only way back in.
+              .filter((key) => key !== "richContent")
               .map((key) => {
-                const isVisible = getSectionVisibility(data, key);
+                const isDeleted = (data.deletedSections || []).includes(key);
+                const isVisible = !isDeleted && getSectionVisibility(data, key);
                 return (
                   <div
                     key={key}
-                    draggable
-                    onDragStart={handleGripDragStart(key)}
+                    draggable={!isDeleted}
+                    onDragStart={isDeleted ? undefined : handleGripDragStart(key)}
                     onDragEnd={cleanupDrag}
-                    onClick={() => onSelectSection?.(key)}
-                    title={`${SECTION_LABELS[key] || key} — drag to canvas or click to edit`}
-                    className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-[11px] font-medium cursor-grab active:cursor-grabbing select-none [-webkit-user-drag:element] transition ${
-                      isVisible
-                        ? "border-gray-200 bg-gray-50 text-gray-700 hover:border-violet-300 hover:bg-violet-50"
-                        : "border-dashed border-gray-300 bg-white text-gray-400 hover:border-violet-300"
+                    onClick={() => {
+                      if (isDeleted) restoreSection(key);
+                      else onSelectSection?.(key);
+                    }}
+                    title={
+                      isDeleted
+                        ? `${SECTION_LABELS[key] || key} — deleted, click to restore`
+                        : `${SECTION_LABELS[key] || key} — drag to canvas or click to edit`
+                    }
+                    className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-[11px] font-medium select-none [-webkit-user-drag:element] transition ${
+                      isDeleted
+                        ? "cursor-pointer border-dashed border-red-200 bg-red-50/50 text-red-400 hover:border-red-300 hover:bg-red-50"
+                        : `cursor-grab active:cursor-grabbing ${
+                            isVisible
+                              ? "border-gray-200 bg-gray-50 text-gray-700 hover:border-violet-300 hover:bg-violet-50"
+                              : "border-dashed border-gray-300 bg-white text-gray-400 hover:border-violet-300"
+                          }`
                     }`}
                   >
                     <GripVertical className="h-3 w-3 text-gray-300 flex-shrink-0" />
                     <span className="truncate flex-1">{SECTION_LABELS[key] || key}</span>
-                    {!isVisible && <EyeOff className="h-3 w-3 flex-shrink-0" />}
+                    {isDeleted ? (
+                      <Trash2 className="h-3 w-3 flex-shrink-0" />
+                    ) : (
+                      !isVisible && <EyeOff className="h-3 w-3 flex-shrink-0" />
+                    )}
                   </div>
                 );
               })}
@@ -3757,20 +4192,7 @@ export function TemplateEditor({
               draggable
               onDragStart={newContentBlockDragStart}
               onDragEnd={cleanupDrag}
-              onClick={() => {
-                const blocks = [...(data.contentBlocks || [])];
-                blocks.push({
-                  enabled: true,
-                  layout: "media-left" as const,
-                  mediaType: "image" as const,
-                  mediaUrl: "",
-                  textFormat: "plain" as const,
-                  heading: "New Content Block",
-                  content: "Write your content here...",
-                });
-                onChange({ ...data, contentBlocks: blocks });
-                onSelectSection?.("contentBlocks");
-              }}
+              onClick={addContentBlock}
               title="New content block — drag to canvas or click to add"
               className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg border border-violet-200 bg-violet-50 text-violet-700 text-[11px] font-semibold cursor-grab active:cursor-grabbing select-none [-webkit-user-drag:element] hover:bg-violet-100 transition"
             >
