@@ -53,17 +53,65 @@ export async function POST(req: NextRequest) {
 
     const { InvitationRequest } = await getDB();
 
-    const registrant = await InvitationRequest.create({
+    const identity = {
       landing_page_id: /^[a-f\d]{24}$/i.test(rawLandingPageId) ? rawLandingPageId : undefined,
       landing_page_slug: rawLandingPageSlug || undefined,
       first_name: firstName,
       email,
       whatsapp_number: whatsappNumber || undefined,
       location: location || undefined,
-      payment_status: "pending",
-      amount: pricing.amount,
-      currency: pricing.currency,
-    });
+    };
+
+    // One lead per person per webinar.
+    //
+    // Every tap of "Pay" used to insert a new row, so anyone who backed out of
+    // the gateway and tried again became two, three, four leads — all of them
+    // `pending`, all of them the same person. That made the registrant list in
+    // the CRM misleading and the pending count meaningless as a measure of
+    // lost payments.
+    //
+    // A registration that hasn't been paid for yet is just a lead, so reuse it
+    // and point it at the new order. Anything already `paid` is deliberately
+    // left alone: reusing it would overwrite a confirmed enrolment (and its
+    // payment id) with a fresh unpaid order.
+    const reusable = await InvitationRequest.findOne({
+      email,
+      payment_status: { $in: ["pending", "failed"] },
+      ...(identity.landing_page_id
+        ? { landing_page_id: identity.landing_page_id }
+        : { landing_page_slug: identity.landing_page_slug }),
+    }).sort({ created_at: -1 });
+
+    const registrant = reusable
+      ? await InvitationRequest.findByIdAndUpdate(
+          reusable._id,
+          {
+            // Their details may have changed since the abandoned attempt.
+            ...identity,
+            payment_status: "pending",
+            amount: pricing.amount,
+            currency: pricing.currency,
+            // Cleared so a stale id can never be mistaken for this attempt.
+            razorpay_order_id: undefined,
+            razorpay_payment_id: undefined,
+          },
+          { new: true }
+        )
+      : await InvitationRequest.create({
+          ...identity,
+          payment_status: "pending",
+          amount: pricing.amount,
+          currency: pricing.currency,
+        });
+
+    if (!registrant) {
+      // Only reachable if the reusable row was deleted between the find and
+      // the update. Nothing is charged yet, so a retry is the right answer.
+      return NextResponse.json(
+        { error: "Couldn't start payment. Please try again." },
+        { status: 409 }
+      );
+    }
 
     const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
 
