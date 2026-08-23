@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from "mongoose";
 // "not_required" = free webinar, the registration itself is the enrolment.
 // "pending" = paid webinar, Razorpay order created but not yet verified.
 // Only "not_required" and "paid" count as enrolled — see isEnrolled below.
-export type InvitationPaymentStatus = "not_required" | "pending" | "paid" | "failed";
+export type InvitationPaymentStatus = "not_required" | "pending" | "paid" | "failed" | "refunded";
 
 export interface IInvitationRequest extends Document {
   landing_page_id?: mongoose.Types.ObjectId;
@@ -18,6 +18,9 @@ export interface IInvitationRequest extends Document {
   razorpay_order_id?: string;
   razorpay_payment_id?: string;
   paid_at?: Date;
+  refunded_at?: Date;
+  /** Gateway's own words for why a payment failed, for the CRM to show. */
+  payment_failure_reason?: string;
   created_at: Date;
 }
 
@@ -31,7 +34,7 @@ const InvitationRequestSchema = new Schema<IInvitationRequest>(
     location: { type: String },
     payment_status: {
       type: String,
-      enum: ["not_required", "pending", "paid", "failed"],
+      enum: ["not_required", "pending", "paid", "failed", "refunded"],
       default: "not_required",
     },
     amount: { type: Number },
@@ -39,6 +42,8 @@ const InvitationRequestSchema = new Schema<IInvitationRequest>(
     razorpay_order_id: { type: String },
     razorpay_payment_id: { type: String },
     paid_at: { type: Date },
+    refunded_at: { type: Date },
+    payment_failure_reason: { type: String },
     created_at: { type: Date, default: Date.now },
   },
   {

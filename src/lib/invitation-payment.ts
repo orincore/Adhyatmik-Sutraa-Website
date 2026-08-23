@@ -48,7 +48,14 @@ export async function confirmInvitationPayment(params: {
 
   // The order id must be the one this registration created, so a valid
   // signature from some other (e.g. cheaper) order can't be replayed onto it.
-  if (razorpayOrderId && registrant.razorpay_order_id !== razorpayOrderId) {
+  //
+  // A registration with no stored order id at all is the one exception: that
+  // means create-payment's follow-up write lost the id, and refusing here
+  // would strand a customer who really did pay. The caller is responsible for
+  // having established the pairing some other way before reaching this point
+  // (see resolveTarget in the webhook, which will only adopt an order id after
+  // checking the amount paid covers what this registration is priced at).
+  if (razorpayOrderId && registrant.razorpay_order_id && registrant.razorpay_order_id !== razorpayOrderId) {
     return { status: "order_mismatch" };
   }
 
@@ -60,6 +67,9 @@ export async function confirmInvitationPayment(params: {
     {
       payment_status: "paid",
       razorpay_payment_id: razorpayPaymentId,
+      // Backfilled when it was missing, so this row can never be adopted by a
+      // second order id later.
+      ...(razorpayOrderId ? { razorpay_order_id: razorpayOrderId } : {}),
       paid_at: new Date(),
     },
     { new: true }
@@ -95,3 +105,52 @@ export async function confirmInvitationPayment(params: {
  * and any later re-confirmation is an already-confirmed no-op.
  */
 export const SETTLED_PAYMENT_STATES = new Set(["captured", "authorized"]);
+
+/**
+ * A payment attempt Razorpay reports as failed.
+ *
+ * Guarded to `pending` so a late `payment.failed` for one abandoned attempt
+ * can never downgrade a registration the person went on to pay for.
+ */
+export async function markInvitationFailed(params: {
+  invitationId?: string;
+  razorpayOrderId?: string;
+  reason?: string;
+}): Promise<boolean> {
+  const { InvitationRequest } = await getDB();
+  const filter: Record<string, any> = { payment_status: "pending" };
+  if (params.invitationId) filter._id = params.invitationId;
+  else if (params.razorpayOrderId) filter.razorpay_order_id = params.razorpayOrderId;
+  else return false;
+
+  const updated = await InvitationRequest.findOneAndUpdate(
+    filter,
+    { payment_status: "failed", ...(params.reason ? { payment_failure_reason: params.reason } : {}) },
+    { new: true }
+  ).catch(() => null);
+
+  return !!updated;
+}
+
+/**
+ * A refund Razorpay has processed. Guarded to `paid`, which also makes a
+ * refund event that arrives before its capture event a harmless no-op.
+ */
+export async function markInvitationRefunded(params: {
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+}): Promise<boolean> {
+  const { InvitationRequest } = await getDB();
+  const filter: Record<string, any> = { payment_status: "paid" };
+  if (params.razorpayOrderId) filter.razorpay_order_id = params.razorpayOrderId;
+  else if (params.razorpayPaymentId) filter.razorpay_payment_id = params.razorpayPaymentId;
+  else return false;
+
+  const updated = await InvitationRequest.findOneAndUpdate(
+    filter,
+    { payment_status: "refunded", refunded_at: new Date() },
+    { new: true }
+  ).catch(() => null);
+
+  return !!updated;
+}
