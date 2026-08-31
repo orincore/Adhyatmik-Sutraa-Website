@@ -1816,6 +1816,24 @@ function VideoWithControls({
         controlsList="nodownload"
         playsInline
       />
+      {/* The native `poster` attribute above only ever paints before the
+          element's very first frame — once the video has played even once,
+          the browser drops it for good and a paused video just shows its
+          last frame, not the poster. That's why a custom thumbnail "vanished"
+          as soon as the video was played and then paused. This overlay
+          re-covers the video with the chosen thumbnail any time it isn't
+          actively playing (start, manual pause, or end), so the thumbnail
+          reliably reappears — not just on the very first load. */}
+      {poster && !isPlaying && (
+        <button
+          type="button"
+          onClick={togglePlayPause}
+          className="absolute inset-0 z-40 h-full w-full cursor-pointer border-0 p-0"
+          aria-label="Play video"
+        >
+          <img src={poster} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        </button>
+      )}
       <button
         type="button"
         onClick={togglePlayPause}
