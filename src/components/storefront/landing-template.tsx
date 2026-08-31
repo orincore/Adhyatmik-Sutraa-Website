@@ -223,14 +223,34 @@ const resolveLink = (value?: string | null) => (value && value.trim().length ? v
 // ---------------------------------------------------------------------------
 // YouTube Embed — respects user mute setting (browser may block unmuted autoplay)
 // ---------------------------------------------------------------------------
-function YouTubeEmbed({ videoId, autoplay, muted, className }: {
+function YouTubeEmbed({ videoId, autoplay, muted, className, thumbnail }: {
   videoId: string;
   autoplay: boolean;
   muted: boolean;
   className?: string;
+  // Custom cover image, used two ways below: as a click-to-play facade when
+  // the embed isn't set to autoplay (iframe deferred until tapped — also
+  // saves loading YouTube's player for a video nobody starts), and as a
+  // brief overlay while an autoplaying embed buffers, so the visitor sees
+  // the chosen thumbnail instead of YouTube's own poster frame / black flash.
+  thumbnail?: string;
 }) {
+  // A tap on the facade is real user activation, so it's allowed to play
+  // with sound even when the section's own autoplay setting is off.
+  const [userActivated, setUserActivated] = React.useState(false);
+  const effectiveAutoplay = autoplay || userActivated;
+
   // Use the muted setting as provided (browser may block unmuted autoplay)
-  const src = `https://www.youtube.com/embed/${videoId}?autoplay=${autoplay ? "1" : "0"}&mute=${muted ? "1" : "0"}&loop=${autoplay ? "1" : "0"}&playlist=${videoId}&rel=0&modestbranding=1&playsinline=1`;
+  const src = `https://www.youtube.com/embed/${videoId}?autoplay=${effectiveAutoplay ? "1" : "0"}&mute=${muted ? "1" : "0"}&loop=${effectiveAutoplay ? "1" : "0"}&playlist=${videoId}&rel=0&modestbranding=1&playsinline=1`;
+
+  // With a thumbnail and no autoplay, don't mount the iframe (and everything
+  // YouTube loads with it) until the visitor actually taps play.
+  const deferred = !!thumbnail && !autoplay && !userActivated;
+
+  const [coverVisible, setCoverVisible] = React.useState(!!thumbnail && !userActivated);
+  React.useEffect(() => {
+    setCoverVisible(!!thumbnail && !userActivated);
+  }, [thumbnail, videoId, userActivated]);
 
   // Blanked (fully unloaded, not just paused) for the duration of a Razorpay
   // checkout — see useSuspendDuringCheckout. Restoring the real src afterwards
@@ -239,15 +259,46 @@ function YouTubeEmbed({ videoId, autoplay, muted, className }: {
   const [suspended, setSuspended] = React.useState(false);
   useSuspendDuringCheckout(setSuspended);
 
+  const handleIframeLoad = () => {
+    if (!autoplay || userActivated) return;
+    // Approximates "playback has started" so the cover doesn't just vanish
+    // the instant the iframe document loads, before the player itself has
+    // painted a frame. The exact signal (IFrame API's onStateChange) needs
+    // enablejsapi plus an origin-matched postMessage listener for what is
+    // otherwise a cosmetic transition, so a short grace period stands in.
+    window.setTimeout(() => setCoverVisible(false), 600);
+  };
+
   return (
-    <iframe
-      key={`${videoId}-${autoplay}`}
-      src={suspended ? "about:blank" : src}
-      className={["absolute inset-0 h-full w-full", className].filter(Boolean).join(" ")}
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-      allowFullScreen
-      loading="eager"
-    />
+    <div className={["absolute inset-0 h-full w-full", className].filter(Boolean).join(" ")}>
+      {!deferred && (
+        <iframe
+          key={`${videoId}-${effectiveAutoplay}`}
+          src={suspended ? "about:blank" : src}
+          className="absolute inset-0 h-full w-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          loading="eager"
+          onLoad={handleIframeLoad}
+        />
+      )}
+      {thumbnail && coverVisible && (
+        <button
+          type="button"
+          onClick={() => setUserActivated(true)}
+          className="absolute inset-0 flex h-full w-full items-center justify-center border-0 p-0"
+          aria-label="Play video"
+        >
+          <img src={thumbnail} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <span className="absolute inset-0 bg-black/20" aria-hidden="true" />
+          <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-lg transition-transform hover:scale-110">
+            <svg className="ml-1 h-6 w-6 text-gray-900" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </span>
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -1655,11 +1706,15 @@ function VideoWithControls({
   className,
   autoplay,
   mute,
+  poster,
 }: {
   src?: string;
   className?: string;
   autoplay?: boolean;
   mute?: boolean;
+  // Custom cover image shown until the video has a frame to paint (native
+  // <video poster>) — also masks the brief blank gap while the file loads.
+  poster?: string;
 }) {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = React.useState(false);
@@ -1723,11 +1778,36 @@ function VideoWithControls({
     return () => video.removeEventListener("play", handlePlay);
   }, [mute]);
 
+  // Root cause of "autoplay doesn't work" for uploaded hero/section videos:
+  // this app renders on the server (Next.js SSR). React never serializes
+  // `muted` into the actual HTML markup it sends down — it only sets it as a
+  // DOM property once React's own JS hydrates. The browser's HTML parser,
+  // reading the raw server markup, sees `<video autoplay>` with NO `muted`
+  // attribute and immediately attempts an *unmuted* autoplay before any of
+  // that JS runs; the browser's autoplay policy blocks it outright, and
+  // browsers do not retry the automatic attempt later just because `.muted`
+  // gets set afterward — so the video sits there paused until someone taps
+  // it. Explicitly (re)issuing `.play()` here, after `.muted` is forced true,
+  // is a fresh script-initiated request, which the muted-autoplay allowance
+  // actually covers, so it starts playback reliably. Re-runs on `src`
+  // changes too, since swapping the source on a mounted element re-triggers
+  // the same resource-selection algorithm (and the same race) each time.
+  React.useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !autoplay || !src) return;
+    video.muted = true;
+    const playPromise = video.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {});
+    }
+  }, [autoplay, src]);
+
   return (
     <div className="relative w-full h-full">
       <video
         ref={videoRef}
         src={src}
+        poster={poster}
         className={className}
         autoPlay={autoplay}
         muted={mute}
@@ -3058,6 +3138,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           videoId={youtubeId}
           autoplay={shouldAutoplay && options.isActive !== false}
           muted={isMuted}
+          thumbnail={settings.thumbnail}
           className={options.className}
         />,
         options.wrapperClassName || "relative w-full overflow-hidden aspect-video"
@@ -3071,9 +3152,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
         settings = mediaSettings['hero.heroImage'];
       }
       settings = settings || DEFAULT_MEDIA_SETTINGS;
-      
-      const videoId = `video-${key || Date.now()}`;
-      
+
       // Module-level component (see VideoWithControls) — must NOT be defined
       // inline here, or it remounts (and the video reloads) on every render.
       return withWrapper(
@@ -3082,6 +3161,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
           className={options.className}
           autoplay={settings.autoplay}
           mute={settings.mute}
+          poster={settings.thumbnail}
         />,
         options.wrapperClassName
       );
@@ -4252,19 +4332,22 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                     videoId={videoId}
                     autoplay={settings.autoplay}
                     muted={settings.mute}
+                    thumbnail={settings.thumbnail}
                   />
                 </div>
               );
             } else if (block.mediaType === "video") {
               const settings = mediaSettings[blockKey] || DEFAULT_MEDIA_SETTINGS;
+              // Shared component (see VideoWithControls) — not a bare <video>,
+              // so it gets the same reliable-autoplay fix and poster support
+              // as every other video slot on the page.
               return (
                 <div className="relative w-full aspect-video rounded-xl overflow-hidden shadow-lg">
-                  <video
+                  <VideoWithControls
                     src={block.mediaUrl}
-                    autoPlay={settings.autoplay}
-                    muted={settings.mute}
-                    loop
-                    playsInline
+                    autoplay={settings.autoplay}
+                    mute={settings.mute}
+                    poster={settings.thumbnail}
                     className="w-full h-full object-cover"
                   />
                 </div>
