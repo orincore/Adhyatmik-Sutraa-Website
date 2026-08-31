@@ -1812,7 +1812,15 @@ function VideoWithControls({
         autoPlay={autoplay}
         muted={mute}
         loop={autoplay}
-        controls={true}
+        // iOS/WebKit renders native video controls (and the big center play
+        // button they bring with a paused video) in their own compositing
+        // layer that paints above ordinary DOM siblings regardless of
+        // z-index — so on iPhone/iPad the thumbnail overlay just below was
+        // invisible, hidden underneath that native chrome, even though it
+        // worked fine on desktop/Android. Suppressing `controls` for exactly
+        // the moments the thumbnail cover is showing removes that competing
+        // native surface; controls come back the instant playback starts.
+        controls={!(poster && !isPlaying)}
         controlsList="nodownload"
         playsInline
       />
