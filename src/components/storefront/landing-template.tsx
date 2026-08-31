@@ -2987,12 +2987,23 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
       ? t.floatingButton!.ctaTextOverride!
       : floatingButtonProps?.label;
 
+  // Each slide carries the exact mediaSettings key it should render with.
+  // Root cause of a hard-to-spot bug (thumbnail/autoplay silently ignored):
+  // when there are no real `heroMedia` slides, this falls back to treating
+  // `hero.heroImage` as a single slide — but the caller below used to always
+  // look that slide up under the key `hero.heroMedia.0.url` regardless. If a
+  // page ever had a real slide at index 0 in the past (since deleted) and
+  // its mediaSettings entry was never cleaned up, that orphaned entry sits
+  // at that exact key and permanently wins over the *real*, currently-edited
+  // "Hero Image" settings (autoplay/mute/thumbnail) — even though nothing in
+  // the editor points at it anymore. Tagging each slide with its true key
+  // here removes the guesswork at render time.
   const heroSlides = useMemo(() => {
     const slides = (t.hero.heroMedia || [])
       .filter((item) => item?.url && item.url.trim().length > 0)
-      .map((item) => ({ ...item, url: item.url.trim() }));
+      .map((item, i) => ({ ...item, url: item.url.trim(), mediaKey: mediaKey("hero", "heroMedia", i, "url") }));
     if (slides.length === 0 && hasContent(t.hero.heroImage)) {
-      return [{ url: t.hero.heroImage, label: t.hero.highlightedWord || "" }];
+      return [{ url: t.hero.heroImage, label: t.hero.highlightedWord || "", mediaKey: mediaKey("hero", "heroImage") }];
     }
     return slides;
   }, [t.hero.heroMedia, t.hero.heroImage, t.hero.highlightedWord]);
@@ -3076,7 +3087,7 @@ export function LandingTemplate({ data, pageContent, landingPageId, pageSlug, ed
                   : "opacity-0 scale-95 pointer-events-none"
               }`}
             >
-              {renderMedia(slide.url, mediaKey("hero", "heroMedia", index, "url"), {
+              {renderMedia(slide.url, slide.mediaKey, {
                 wrapperClassName: "absolute inset-0 w-full h-full",
                 className: `w-full h-full ${fitClassName}`,
                 alt: slide.label || `Hero slide ${index + 1}`,
