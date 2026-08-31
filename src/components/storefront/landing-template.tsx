@@ -1767,6 +1767,38 @@ function VideoWithControls({
     };
   }, []);
 
+  // Auto-hides the custom play/pause button 2s into playback, the same way
+  // any normal video player's controls fade once you're no longer touching
+  // them — sitting there permanently just clutters the frame while playing
+  // (native `controls` already give a pause affordance during playback; see
+  // below). Always visible while paused, and a tap/mouse-move over the video
+  // brings it back and restarts the 2s countdown.
+  const [showButton, setShowButton] = React.useState(true);
+  const hideTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearHideTimer = () => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+  };
+  const scheduleHide = React.useCallback(() => {
+    clearHideTimer();
+    hideTimerRef.current = setTimeout(() => setShowButton(false), 2000);
+  }, []);
+  React.useEffect(() => {
+    if (isPlaying) {
+      scheduleHide();
+    } else {
+      setShowButton(true);
+      clearHideTimer();
+    }
+    return clearHideTimer;
+  }, [isPlaying, scheduleHide]);
+  const revealButton = () => {
+    setShowButton(true);
+    if (isPlaying) scheduleHide();
+  };
+
   React.useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -1803,7 +1835,7 @@ function VideoWithControls({
   }, [autoplay, src]);
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full" onMouseMove={revealButton} onTouchStart={revealButton}>
       <video
         ref={videoRef}
         src={src}
@@ -1845,7 +1877,9 @@ function VideoWithControls({
       <button
         type="button"
         onClick={togglePlayPause}
-        className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 flex items-center justify-center w-8 h-8 rounded-full bg-white/50 hover:bg-white/80 text-gray-900 shadow-md transition-all hover:scale-110"
+        className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 flex items-center justify-center w-8 h-8 rounded-full bg-white/50 hover:bg-white/80 text-gray-900 shadow-md transition-all hover:scale-110 duration-300 ${
+          showButton ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
         aria-label={isPlaying ? "Pause" : "Play"}
       >
         {isPlaying ? (
