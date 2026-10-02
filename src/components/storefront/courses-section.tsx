@@ -71,7 +71,7 @@ export function CoursesSection() {
               <Link
                 key={course.id}
                 href={`/courses/${course.slug}`}
-                className="group flex flex-col rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 bg-white hover:border-teal-200 hover:-translate-y-1"
+                className="group h-full flex flex-col rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 bg-white hover:border-teal-200 hover:-translate-y-1"
               >
                 {/* Image */}
                 <div className="relative h-44 w-full overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-100 flex-shrink-0">
@@ -100,7 +100,7 @@ export function CoursesSection() {
 
                 {/* Body */}
                 <div className="flex flex-col flex-1 p-5">
-                  <h3 className="font-serif font-bold text-base text-stone-800 mb-1 line-clamp-2 group-hover:text-teal-700 transition-colors leading-snug">
+                  <h3 className="font-serif font-bold text-base text-stone-800 mb-1 line-clamp-2 min-h-[2.75rem] group-hover:text-teal-700 transition-colors leading-snug">
                     {course.title}
                   </h3>
                   <p className="text-xs text-stone-500 leading-relaxed line-clamp-2 flex-1">
